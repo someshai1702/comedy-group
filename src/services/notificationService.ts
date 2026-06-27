@@ -1,7 +1,7 @@
 // Notification Service
 // Handles push notifications for PWA on all devices and browsers
 
-import { getToken, onMessage } from "firebase/messaging";
+import { getToken, onMessage, isSupported } from "firebase/messaging";
 import { getMessaging } from "firebase/messaging";
 import { initializeApp } from "firebase/app";
 import { firebaseConfig, VAPID_PUBLIC_KEY } from "./firebase";
@@ -30,57 +30,86 @@ export interface NotificationMessage {
   type: "event" | "reminder" | "update" | "ticket";
 }
 
+// Check if Firebase Messaging is supported
+async function checkMessagingSupport(): Promise<boolean> {
+  try {
+    const supported = await isSupported();
+    console.log("Firebase Messaging supported:", supported);
+    return supported;
+  } catch (error) {
+    console.warn("Error checking messaging support:", error);
+    return false;
+  }
+}
+
 // Initialize Firebase and messaging
 export async function initializePushNotifications(): Promise<boolean> {
+  console.log("🚀 Initializing push notifications...");
+  
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    console.warn("Push notifications not supported");
+    console.warn("❌ Push notifications not supported - no service worker or push manager");
     return false;
   }
 
   try {
     // Register service worker
     const registration = await navigator.serviceWorker.register("/sw.js");
-    console.log("Service Worker registered:", registration.scope);
+    console.log("✅ Service Worker registered:", registration.scope);
 
     // Request notification permission
     notificationPermission = await Notification.requestPermission();
+    console.log("📝 Notification permission:", notificationPermission);
+    
     if (notificationPermission !== "granted") {
-      console.warn("Notification permission denied");
+      console.warn("❌ Notification permission denied");
       return false;
+    }
+
+    // Check if Firebase Messaging is supported
+    const fcmSupported = await checkMessagingSupport();
+    if (!fcmSupported) {
+      console.warn("⚠️ Firebase Messaging not supported, using browser push");
+      return await subscribeBrowserPush(registration);
     }
 
     // Initialize Firebase Messaging
     try {
+      console.log("🔧 Initializing Firebase with config:", firebaseConfig.projectId);
       const app = initializeApp(firebaseConfig);
       messaging = getMessaging(app);
+      console.log("✅ Firebase Messaging initialized");
 
       // Get FCM token
+      console.log("🔑 Getting FCM token with VAPID key...");
       const token = await getToken(messaging, {
         vapidKey: VAPID_PUBLIC_KEY,
         serviceWorkerRegistration: registration
       });
 
       if (token) {
-        console.log("FCM Token obtained");
+        console.log("✅ FCM Token obtained:", token.substring(0, 50) + "...");
         await saveFCMToken(token);
         
         // Listen for foreground messages
         onMessage(messaging, (payload: any) => {
-          console.log("Foreground message received:", payload);
+          console.log("📨 Foreground message received:", payload);
           showNotificationFromPayload(payload);
         });
         
         return true;
+      } else {
+        console.warn("⚠️ No FCM token returned - notifications may not work");
       }
-    } catch (fcmError) {
-      console.warn("Firebase Messaging not configured, using browser push:", fcmError);
+    } catch (fcmError: any) {
+      console.error("❌ Firebase Messaging error:", fcmError.message || fcmError);
       // Fallback to browser push
+      console.log("🔄 Falling back to browser push...");
       return await subscribeBrowserPush(registration);
     }
 
     return false;
-  } catch (error) {
-    console.error("Push initialization failed:", error);
+  } catch (error: any) {
+    console.error("❌ Push initialization failed:", error.message || error);
     return false;
   }
 }

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Family, Event, RSVP, GroupNotification } from "../types";
-import { Calendar, MapPin, Clock, ArrowRight, Bell, AlertCircle, Plus, CheckCircle2, Lock, Unlock, HelpCircle, Film } from "lucide-react";
+import { Calendar, MapPin, Clock, ArrowRight, Bell, AlertCircle, Plus, CheckCircle2, Lock, Unlock, HelpCircle, Film, BellRing, Check } from "lucide-react";
+import { showLocalNotification } from "../hooks/usePushNotifications";
 
 interface DashboardProps {
   currentFamily: Family;
@@ -479,6 +480,36 @@ ${evt.notes ? `💬 *Notes:* ${evt.notes}\n` : ""}
                 <span className="text-orange-600 font-black text-lg">{families.filter(f => f.id !== "admin").reduce((sum, f) => sum + f.adults.length + f.children.length, 0)} Members</span>
               </div>
             </div>
+          </div>
+
+          {/* Notification Settings Box */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 space-y-3 text-xs shadow-sm">
+            <h4 className="font-extrabold text-gray-800 flex items-center gap-1.5">
+              <BellRing className="w-4 h-4 text-orange-500" />
+              Notification Settings
+            </h4>
+            <p className="text-gray-500 leading-relaxed font-medium">
+              Receive alerts for new events, reminders, and updates.
+            </p>
+            <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
+              <Bell className="w-4 h-4 text-emerald-600" />
+              <span className="text-emerald-700 font-bold flex-1">
+                Notifications are enabled
+              </span>
+              <Check className="w-4 h-4 text-emerald-600" />
+            </div>
+            <button
+              onClick={() => {
+                showLocalNotification(
+                  "🧪 Test Notification",
+                  "This is a test notification from Comedy Group Planner! You'll receive real alerts for events."
+                );
+              }}
+              className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+            >
+              <Bell className="w-4 h-4" />
+              Test Notification
+            </button>
           </div>
 
           {/* Account Security (Change PIN) Box */}
