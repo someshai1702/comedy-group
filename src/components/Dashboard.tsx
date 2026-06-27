@@ -466,17 +466,17 @@ ${evt.notes ? `💬 *Notes:* ${evt.notes}\n` : ""}
               💡 Comedy Group Info
             </h4>
             <p className="text-gray-500 leading-relaxed font-medium">
-              Comedy Group consists of exactly 7 families, 14 adults and 14 kids, making 28 members total. 
+              Comedy Group consists of {families.filter(f => f.id !== "admin").length} families, {families.filter(f => f.id !== "admin").reduce((sum, f) => sum + f.adults.length, 0)} adults and {families.filter(f => f.id !== "admin").reduce((sum, f) => sum + f.children.length, 0)} kids, making {families.filter(f => f.id !== "admin").reduce((sum, f) => sum + f.adults.length + f.children.length, 0)} members total. 
               Always submit Attending Status and select food items before the host-defined deadline so the Captain can compile and message the restaurant.
             </p>
             <div className="pt-2 border-t border-orange-100 grid grid-cols-2 gap-2 text-center">
               <div className="bg-white border border-orange-100 p-2.5 rounded-xl shadow-sm">
                 <span className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider">Total Couples</span>
-                <span className="text-orange-600 font-black text-lg">7 Families</span>
+                <span className="text-orange-600 font-black text-lg">{families.filter(f => f.id !== "admin").length} Families</span>
               </div>
               <div className="bg-white border border-orange-100 p-2.5 rounded-xl shadow-sm">
                 <span className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider">Headcount</span>
-                <span className="text-orange-600 font-black text-lg">28 Members</span>
+                <span className="text-orange-600 font-black text-lg">{families.filter(f => f.id !== "admin").reduce((sum, f) => sum + f.adults.length + f.children.length, 0)} Members</span>
               </div>
             </div>
           </div>
