@@ -4,14 +4,32 @@ import App from './App.tsx';
 import './index.css';
 
 // Register PWA Service Worker for offline capabilities
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("/sw.js")
-      .then((reg) => console.log("[PWA] Service Worker registered successfully:", reg.scope))
-      .catch((err) => console.error("[PWA] Service Worker registration failed:", err));
-  });
+async function registerServiceWorker() {
+  if ("serviceWorker" in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.register("/sw.js", {
+        scope: "/"
+      });
+      console.log("[PWA] Service Worker registered:", registration.scope);
+      
+      // Check for updates
+      registration.addEventListener("updatefound", () => {
+        const newWorker = registration.installing;
+        if (newWorker) {
+          newWorker.addEventListener("statechange", () => {
+            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+              console.log("[PWA] New version available! Refresh to update.");
+            }
+          });
+        }
+      });
+    } catch (err) {
+      console.error("[PWA] Service Worker registration failed:", err);
+    }
+  }
 }
+
+registerServiceWorker();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
