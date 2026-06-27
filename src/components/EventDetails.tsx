@@ -326,43 +326,6 @@ ${event.googleMapsUrl ? `🔗 *Google Maps:* ${event.googleMapsUrl}\n` : ""}⏳ 
                 <p className="leading-relaxed font-medium">{event.notes}</p>
               </div>
             )}
-
-            {/* QR Code section */}
-            <div className="pt-3 border-t border-gray-100 text-center space-y-3">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wide block">Event QR Code for Check-in</span>
-              <div className="inline-block p-2 bg-white rounded-xl border border-gray-100 shadow-sm">
-                {/* Visual SVG mock QR code that encodes the event's details */}
-                <svg className="w-24 h-24" viewBox="0 0 100 100">
-                  <rect width="100" height="100" fill="white"/>
-                  {/* Outer corners */}
-                  <rect x="5" y="5" width="20" height="20" fill="black"/>
-                  <rect x="8" y="8" width="14" height="14" fill="white"/>
-                  <rect x="11" y="11" width="8" height="8" fill="black"/>
-
-                  <rect x="75" y="5" width="20" height="20" fill="black"/>
-                  <rect x="78" y="8" width="14" height="14" fill="white"/>
-                  <rect x="81" y="81" width="8" height="8" fill="black"/>
-
-                  <rect x="5" y="75" width="20" height="20" fill="black"/>
-                  <rect x="8" y="78" width="14" height="14" fill="white"/>
-                  <rect x="11" y="81" width="8" height="8" fill="black"/>
-
-                  {/* Random pixels */}
-                  <rect x="35" y="15" width="6" height="6" fill="black"/>
-                  <rect x="45" y="5" width="6" height="6" fill="black"/>
-                  <rect x="55" y="10" width="6" height="12" fill="black"/>
-                  <rect x="30" y="30" width="12" height="6" fill="black"/>
-                  <rect x="45" y="45" width="12" height="12" fill="black"/>
-                  <rect x="15" y="45" width="6" height="12" fill="black"/>
-                  <rect x="65" y="35" width="12" height="6" fill="black"/>
-                  <rect x="80" y="45" width="6" height="18" fill="black"/>
-                  <rect x="35" y="65" width="18" height="6" fill="black"/>
-                  <rect x="45" y="75" width="6" height="12" fill="black"/>
-                  <rect x="65" y="65" width="12" height="12" fill="black"/>
-                </svg>
-              </div>
-              <p className="text-[10px] text-gray-400 font-semibold uppercase">Scan at the venue to view table orders</p>
-            </div>
           </div>
         </div>
 
