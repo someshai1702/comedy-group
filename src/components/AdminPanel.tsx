@@ -458,7 +458,7 @@ ${evt.googleMapsUrl ? `🔗 *Google Maps:* ${evt.googleMapsUrl}\n` : ""}⏳ *Ord
                   onChange={(e) => setEvtHostFamily(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
                 >
-                  {families.filter(f => f.id !== "admin").map((f) => (
+                  {families.map((f) => (
                     <option key={f.id} value={f.id}>{f.name}</option>
                   ))}
                 </select>
@@ -904,7 +904,7 @@ ${evt.googleMapsUrl ? `🔗 *Google Maps:* ${evt.googleMapsUrl}\n` : ""}⏳ *Ord
                       onChange={(e) => setEditEvtHostFamily(e.target.value)}
                       className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm font-bold focus:border-orange-500 focus:outline-none"
                     >
-                      {families.filter(f => f.id !== "admin").map((f) => (
+                      {families.map((f) => (
                         <option key={f.id} value={f.id}>{f.name}</option>
                       ))}
                     </select>
