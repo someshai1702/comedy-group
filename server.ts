@@ -2,9 +2,8 @@ import express from "express";
 import path from "path";
 import fs from "fs/promises";
 import { GoogleGenAI } from "@google/genai";
-import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
-import { supabase } from "./supabase";
+import { supabase } from "./supabase.js";
 
 dotenv.config();
 
@@ -823,6 +822,7 @@ app.post("/api/reset-db", async (req, res) => {
 async function startServer() {
   // Vite integration (only in local development)
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
