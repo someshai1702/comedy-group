@@ -64,6 +64,11 @@ export default function AdminPanel({
   const [evtDeadline, setEvtDeadline] = useState<string>("");
   const [evtNotes, setEvtNotes] = useState<string>("");
 
+  // Movie-specific fields
+  const [movieName, setMovieName] = useState<string>("");
+  const [movieVenue, setMovieVenue] = useState<string>("");
+  const [movieShowtime, setMovieShowtime] = useState<string>("");
+
   // --- 2. Menu Editor State ---
   const [menuSection, setMenuSection] = useState<keyof Menu>("starters");
   const [draftMenuItems, setDraftMenuItems] = useState<MenuItem[]>(menu[menuSection] || []);
@@ -98,6 +103,12 @@ export default function AdminPanel({
       return;
     }
 
+    // Movie-specific validation
+    if (evtType === "Movie" && !movieName) {
+      setError("Please enter the movie name.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     setSuccess("");
@@ -108,7 +119,7 @@ export default function AdminPanel({
         ? new Date(evtDeadline).toISOString() 
         : new Date(`${evtDate}T${evtTime}`).toISOString();
 
-      await onCreateEvent({
+      const eventData: any = {
         name: evtName,
         type: evtType,
         hostFamilyId: evtHostFamily,
@@ -119,9 +130,18 @@ export default function AdminPanel({
         googleMapsUrl: evtMaps,
         deadline: finalDeadline,
         notes: evtNotes
-      });
+      };
 
-      setSuccess("Dinner scheduled successfully! Everyone was notified.");
+      // Add movie-specific fields if this is a movie event
+      if (evtType === "Movie") {
+        eventData.movieName = movieName;
+        eventData.movieVenue = movieVenue;
+        eventData.movieShowtime = movieShowtime || evtTime;
+      }
+
+      await onCreateEvent(eventData);
+
+      setSuccess(evtType === "Movie" ? "Movie Night scheduled successfully! Everyone was notified." : "Dinner scheduled successfully! Everyone was notified.");
       // Reset form
       setEvtName("");
       setEvtRestaurant("");
@@ -129,6 +149,10 @@ export default function AdminPanel({
       setEvtMaps("");
       setEvtDeadline("");
       setEvtNotes("");
+      // Reset movie fields
+      setMovieName("");
+      setMovieVenue("");
+      setMovieShowtime("");
     } catch (err: any) {
       setError(err.message || "Failed to create event.");
     } finally {
@@ -446,6 +470,7 @@ ${evt.googleMapsUrl ? `🔗 *Google Maps:* ${evt.googleMapsUrl}\n` : ""}⏳ *Ord
                 <option value="Anniversary">Anniversary</option>
                 <option value="Holiday Dinner">Holiday Dinner</option>
                 <option value="Festival Celebration">Festival Celebration</option>
+                <option value="Movie">🎬 Movie Night</option>
                 <option value="Other">Other Occasion</option>
               </select>
             </div>
@@ -539,6 +564,49 @@ ${evt.googleMapsUrl ? `🔗 *Google Maps:* ${evt.googleMapsUrl}\n` : ""}⏳ *Ord
                 className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm focus:border-orange-500 focus:outline-none placeholder:text-gray-400"
               />
             </div>
+
+            {/* Movie-specific fields - shown only when Movie is selected */}
+            {evtType === "Movie" && (
+              <>
+                <div className="md:col-span-2 border-t border-gray-200 pt-4 mt-2">
+                  <h5 className="text-sm font-black text-purple-700 mb-4 flex items-center gap-2">
+                    🎬 Movie Night Details
+                  </h5>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs text-gray-500 font-bold block">Movie Name *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Pathaan, Jawan, Dunki"
+                    value={movieName}
+                    onChange={(e) => setMovieName(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-purple-50 border border-purple-200 text-gray-800 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs text-gray-500 font-bold block">Cinema Hall / Venue</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. INOX, PVR, Cinepolis"
+                    value={movieVenue}
+                    onChange={(e) => setMovieVenue(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-purple-50 border border-purple-200 text-gray-800 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs text-gray-500 font-bold block">Showtime</label>
+                  <input
+                    type="time"
+                    value={movieShowtime}
+                    onChange={(e) => setMovieShowtime(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-purple-50 border border-purple-200 text-gray-800 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <button

@@ -25,7 +25,7 @@ export interface Menu {
 export interface Event {
   id: string;
   name: string;
-  type: "Birthday" | "Anniversary" | "Holiday Dinner" | "Festival Celebration" | "Weekend Dinner" | "Regular Dinner" | "Other";
+  type: "Birthday" | "Anniversary" | "Holiday Dinner" | "Festival Celebration" | "Weekend Dinner" | "Regular Dinner" | "Movie" | "Other";
   hostFamilyId: string;
   date: string;
   time: string;
@@ -35,6 +35,10 @@ export interface Event {
   deadline: string;
   notes: string;
   isActive: boolean;
+  // Movie-specific fields
+  movieName?: string;
+  movieVenue?: string;
+  movieShowtime?: string;
 }
 
 export interface RSVP {
