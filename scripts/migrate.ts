@@ -5,7 +5,7 @@ import path from "path";
 async function runMigration() {
   console.log("[Migration] Starting migration from db.json to Supabase...");
   
-  const dbPath = path.join(__dirname, "../db.json");
+  const dbPath = path.join(process.cwd(), "db.json");
   let db: any;
   try {
     const data = await fs.readFile(dbPath, "utf-8");
