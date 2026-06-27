@@ -9,12 +9,16 @@ import LiveSummary from "./components/LiveSummary";
 import Reports from "./components/Reports";
 import AdminPanel from "./components/AdminPanel";
 import MasterPage from "./components/MasterPage";
+import { usePushNotifications } from "./hooks/usePushNotifications";
 import { LogOut, Home, BarChart2, ShieldAlert, ShoppingBag, Bell, Menu as Hamburger, RefreshCw, Calendar } from "lucide-react";
 
 export default function App() {
   // Authentication & Session
   const [currentFamily, setCurrentFamily] = useState<Family | null>(null);
   const [isAdminRoute, setIsAdminRoute] = useState<boolean>(false);
+
+  // Initialize push notifications
+  usePushNotifications();
 
   // Global State (replicated from backend server)
   const [dbState, setDbState] = useState<DbState>({
