@@ -1,17 +1,28 @@
-import { useEffect, useState } from "react";
-import { initializePushNotifications, getNotificationStatus } from "../services/notificationService";
+import { useEffect, useState, useCallback } from "react";
+import { initializePushNotifications, getNotificationStatus, showLocalNotification } from "../services/notificationService";
 
 export function usePushNotifications() {
-  const [notificationPermission, setNotificationPermission] = useState<string>("default");
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
   const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
+  const [fcmToken, setFcmToken] = useState<string | null>(null);
+
+  const initializePush = useCallback(async () => {
+    try {
+      const success = await initializePushNotifications();
+      setIsSubscribed(success);
+      if (success) {
+        setNotificationPermission("granted");
+      }
+    } catch (error) {
+      console.error("Failed to initialize push notifications:", error);
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window) {
-      // Check current permission status
       const status = getNotificationStatus();
       setNotificationPermission(status);
 
-      // Request permission if not already granted
       if (status === "default") {
         Notification.requestPermission().then((permission) => {
           setNotificationPermission(permission);
@@ -23,31 +34,24 @@ export function usePushNotifications() {
         initializePush();
       }
     }
-  }, []);
+  }, [initializePush]);
 
-  const initializePush = async () => {
-    try {
-      const success = await initializePushNotifications();
-      setIsSubscribed(success);
-    } catch (error) {
-      console.error("Failed to initialize push notifications:", error);
+  const requestPermission = useCallback(async () => {
+    const permission = await Notification.requestPermission();
+    setNotificationPermission(permission);
+    if (permission === "granted") {
+      await initializePush();
     }
-  };
+    return permission;
+  }, [initializePush]);
 
   return {
     notificationPermission,
     isSubscribed,
-    requestPermission: () => Notification.requestPermission()
+    fcmToken,
+    requestPermission,
+    showLocalNotification
   };
 }
 
-export function showLocalNotification(title: string, body: string) {
-  if (typeof window !== "undefined" && Notification.permission === "granted") {
-    new Notification(title, {
-      body,
-      icon: "/public/comedy_group.png",
-      badge: "/public/comedy_group.png",
-      tag: "comedy-group-notification",
-    });
-  }
-}
+export { showLocalNotification } from "../services/notificationService";

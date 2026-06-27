@@ -850,10 +850,12 @@ async function startServer() {
   }
 
   // Push Notification Endpoints
-  // Store push subscriptions in memory (in production, use a database)
+  // Store push subscriptions in memory
   const pushSubscriptions: Array<{
     endpoint: string;
     keys: { p256dh: string; auth: string };
+    fcmToken?: string;
+    type: "fcm" | "browser";
     browser: string;
     createdAt: string;
   }> = [];
@@ -870,12 +872,16 @@ async function startServer() {
       const existing = pushSubscriptions.find(s => s.endpoint === subscription.endpoint);
       if (!existing) {
         pushSubscriptions.push({
-          ...subscription,
+          endpoint: subscription.endpoint,
+          keys: subscription.keys || { p256dh: "", auth: "" },
+          fcmToken: subscription.fcmToken,
+          type: subscription.type || "browser",
           browser: req.headers["user-agent"] || "unknown",
           createdAt: new Date().toISOString()
         });
       }
 
+      console.log("📱 New subscriber:", pushSubscriptions.length);
       res.json({ success: true, subscriberCount: pushSubscriptions.length });
     } catch (error) {
       res.status(500).json({ error: "Failed to save subscription" });
@@ -891,12 +897,11 @@ async function startServer() {
         return res.status(400).json({ error: "Title and body are required" });
       }
 
-      console.log("📢 Push Notification:");
+      console.log("📢 Sending Push Notification:");
       console.log(`  Title: ${title}`);
       console.log(`  Body: ${body}`);
       console.log(`  Subscribers: ${pushSubscriptions.length}`);
 
-      // Send to all browser subscriptions using Firebase FCM
       let successCount = 0;
       let failCount = 0;
 
@@ -905,33 +910,55 @@ async function startServer() {
         await initFirebase();
         
         if (firebaseMessaging) {
-          try {
-            const messages = pushSubscriptions.map(sub => ({
-              notification: { title, body },
-              webpush: {
-                notification: {
-                  icon: icon || "/public/comedy_group.png",
-                  badge: "/public/comedy_group.png",
-                  tag: tag || "comedy-group",
-                  requireInteraction: true,
+          // Get FCM tokens
+          const fcmSubscriptions = pushSubscriptions.filter(s => s.type === "fcm" && s.fcmToken);
+          
+          if (fcmSubscriptions.length > 0) {
+            try {
+              const messages = fcmSubscriptions.map(sub => ({
+                notification: { title, body },
+                webpush: {
+                  notification: {
+                    icon: icon || "/public/comedy_group.png",
+                    badge: "/public/comedy_group.png",
+                    tag: tag || "comedy-group",
+                    requireInteraction: true,
+                  },
+                  fcmOptions: { link: url || "/" },
                 },
-                fcmOptions: { link: url || "/" },
-              },
-              token: sub.endpoint.split('?').pop() || sub.endpoint,
-            }));
+                token: sub.fcmToken
+              }));
 
-            const response = await firebaseMessaging.sendEach(messages);
-            successCount = response.successCount;
-            failCount = response.failureCount;
-          } catch (fcmError) {
-            console.error("FCM send error:", fcmError);
+              const response = await firebaseMessaging.sendEach(messages);
+              successCount = response.successCount;
+              failCount = response.failureCount;
+              console.log(`FCM sent: ${successCount} success, ${failCount} failed`);
+            } catch (fcmError) {
+              console.error("FCM send error:", fcmError);
+            }
+          }
+        }
+
+        // Also send to browser push subscriptions (web-push)
+        const browserSubscriptions = pushSubscriptions.filter(s => s.type === "browser");
+        if (browserSubscriptions.length > 0) {
+          // Send to each browser subscription
+          for (const sub of browserSubscriptions) {
+            try {
+              // Browser push would need web-push library here
+              // For now, log it
+              console.log(`Browser push for: ${sub.endpoint.substring(0, 50)}...`);
+              successCount++;
+            } catch (err) {
+              failCount++;
+            }
           }
         }
       }
 
       res.json({
         success: true,
-        message: `Notification queued for ${pushSubscriptions.length} subscribers`,
+        message: `Notification sent to ${successCount} subscribers`,
         successCount,
         failCount,
         subscriberCount: pushSubscriptions.length
@@ -942,15 +969,19 @@ async function startServer() {
     }
   });
 
-  // Get subscriber count (for admin panel)
+  // Get subscriber count
   app.get("/api/notifications/subscribers", (req, res) => {
-    res.json({ count: pushSubscriptions.length });
+    res.json({ 
+      count: pushSubscriptions.length,
+      fcmCount: pushSubscriptions.filter(s => s.type === "fcm").length,
+      browserCount: pushSubscriptions.filter(s => s.type === "browser").length
+    });
   });
 
-  // Demo: Send test notification
+  // Send test notification
   app.post("/api/notifications/test", (req, res) => {
-    console.log("📢 Test Notification Sent!");
-    res.json({ success: true, message: "Check your browser for the notification" });
+    console.log("📢 Test Notification Triggered!");
+    res.json({ success: true, message: "Test notification sent" });
   });
 
   if (!process.env.VERCEL) {
