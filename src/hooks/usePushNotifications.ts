@@ -45,8 +45,8 @@ export function showLocalNotification(title: string, body: string) {
   if (typeof window !== "undefined" && Notification.permission === "granted") {
     new Notification(title, {
       body,
-      icon: "/comedy_group.png",
-      badge: "/comedy_group.png",
+      icon: "/public/comedy_group.png",
+      badge: "/public/comedy_group.png",
       tag: "comedy-group-notification",
     });
   }

@@ -48,8 +48,8 @@ self.addEventListener("push", (e) => {
   let notificationData = {
     title: "🎉 Comedy Group",
     body: "You have a new notification!",
-    icon: "/comedy_group.png",
-    badge: "/comedy_group.png",
+    icon: "/public/comedy_group.png",
+    badge: "/public/comedy_group.png",
     tag: "comedy-group",
     vibrate: [200, 100, 200, 100, 200],
     requireInteraction: true,
@@ -63,8 +63,8 @@ self.addEventListener("push", (e) => {
       notificationData = {
         ...notificationData,
         ...payload,
-        icon: payload.icon || "/comedy_group.png",
-        badge: payload.badge || "/comedy_group.png"
+        icon: payload.icon || "/public/comedy_group.png",
+        badge: payload.badge || "/public/comedy_group.png"
       };
     } catch (err) {
       notificationData.body = e.data.text() || notificationData.body;
@@ -126,8 +126,8 @@ self.addEventListener("message", (e) => {
     
     self.registration.showNotification(title, {
       body,
-      icon: icon || "/comedy_group.png",
-      badge: badge || "/comedy_group.png",
+      icon: icon || "/public/comedy_group.png",
+      badge: badge || "/public/comedy_group.png",
       tag: tag || "comedy-group",
       vibrate: [200, 100, 200],
       requireInteraction: true,

@@ -12,7 +12,7 @@
   "gcm_user_visible_only": true,
   "icons": [
     {
-      "src": "/comedy_group.png",
+      "src": "/public/comedy_group.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
