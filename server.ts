@@ -807,8 +807,8 @@ app.post("/api/reset-db", async (req, res) => {
 
 // Start server after integrating Vite in development or static hosting in production
 async function startServer() {
-  // Vite integration
-  if (process.env.NODE_ENV !== "production") {
+  // Vite integration (only in local development)
+  if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -822,15 +822,19 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", async () => {
-    console.log(`Express Full-Stack server is actively running on http://localhost:${PORT}`);
-    await cleanupExpiredEvents();
-
-    // Check periodically every 10 minutes
-    setInterval(async () => {
+  if (!process.env.VERCEL) {
+    app.listen(PORT, "0.0.0.0", async () => {
+      console.log(`Express Full-Stack server is actively running on http://localhost:${PORT}`);
       await cleanupExpiredEvents();
-    }, 10 * 60 * 1000);
-  });
+
+      // Check periodically every 10 minutes
+      setInterval(async () => {
+        await cleanupExpiredEvents();
+      }, 10 * 60 * 1000);
+    });
+  }
 }
 
 startServer();
+
+export default app;
