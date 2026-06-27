@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Family, Event, RSVP, GroupNotification } from "../types";
-import { Calendar, MapPin, Clock, ArrowRight, Bell, AlertCircle, Plus, CheckCircle2, Lock, Unlock, HelpCircle } from "lucide-react";
+import { Calendar, MapPin, Clock, ArrowRight, Bell, AlertCircle, Plus, CheckCircle2, Lock, Unlock, HelpCircle, Film } from "lucide-react";
 
 interface DashboardProps {
   currentFamily: Family;
@@ -30,6 +30,41 @@ export default function Dashboard({
     const hostName = families.find(f => f.id === evt.hostFamilyId)?.name || "Comedy Group Host";
     const dlString = evt.deadline ? new Date(evt.deadline).toLocaleString() : "TBD";
     const appLink = window.location.origin;
+    const imageLink = `${appLink}/comedy_group.png`;
+
+    // For Movie events, include ticket count
+    if (evt.type === "Movie") {
+      const eventRsvps = rsvps.filter(r => r.eventId === evt.id && r.attending === "Yes");
+      const totalTickets = eventRsvps.reduce((sum, r) => sum + r.adultsAttendingCount + r.childrenAttendingCount, 0);
+      const confirmedFamilies = eventRsvps.length;
+      const totalFamilies = families.filter(f => f.id !== "admin").length;
+
+      let message = `🎬 *Movie Night - ${evt.movieName || evt.name}*
+
+📅 *Date:* ${evt.date}
+⏰ *Showtime:* ${evt.movieShowtime || evt.time}
+📍 *Venue:* ${evt.movieVenue || evt.restaurant}
+${evt.address ? `🏠 *Address:* ${evt.address}\n` : ""}
+👑 *Hosted by:* ${hostName}
+${evt.notes ? `💬 *Notes:* ${evt.notes}\n` : ""}
+
+📊 *Ticket Update:*
+• ${confirmedFamilies}/${totalFamilies} families confirmed
+• Total Tickets Required: ${totalTickets} tickets
+
+${evt.deadline ? `⏳ *RSVP Deadline:* ${dlString}\n` : ""}
+👇 *Submit your ticket booking here:*
+🔗 ${appLink}
+📷 *Preview:* ${imageLink}`;
+
+      return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    }
+
+    // For regular dinner events
+    const eventRsvps = rsvps.filter(r => r.eventId === evt.id);
+    const confirmedCount = eventRsvps.filter(r => r.attending === "Yes").length;
+    const declinedCount = eventRsvps.filter(r => r.attending === "No").length;
+    const pendingCount = families.filter(f => f.id !== "admin" && !eventRsvps.find(r => r.familyId === f.id)).length;
 
     const message = `🎭 *New Comedy Group Dinner scheduled!*
 🎉 *Occasion:* ${evt.name} (${evt.type})
@@ -39,10 +74,16 @@ export default function Dashboard({
 📍 *Restaurant:* ${evt.restaurant}
 🗺️ *Address:* ${evt.address}
 ${evt.googleMapsUrl ? `🔗 *Google Maps:* ${evt.googleMapsUrl}\n` : ""}⏳ *Order Deadline:* ${dlString}
-💬 *Notes:* ${evt.notes || "Join us for great laughs and delicious food!"}
+${evt.notes ? `💬 *Notes:* ${evt.notes}\n` : ""}
+
+📊 *RSVP Status:*
+• ✅ Confirmed: ${confirmedCount} families
+• ❌ Declined: ${declinedCount} families
+• ⏳ Pending: ${pendingCount} families
 
 👇 *Submit your RSVP & Food Order here:*
-🔗 ${appLink}`;
+🔗 ${appLink}
+📷 *Preview:* ${imageLink}`;
 
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
   };
@@ -249,16 +290,26 @@ ${evt.googleMapsUrl ? `🔗 *Google Maps:* ${evt.googleMapsUrl}\n` : ""}⏳ *Ord
                     <div
                       key={evt.id}
                       onClick={() => onSelectEvent(evt)}
-                      className="group cursor-pointer bg-white border border-gray-100 hover:border-orange-300 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden active:scale-[0.99]"
+                      className={`group cursor-pointer bg-white border rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden active:scale-[0.99] ${
+                        evt.type === "Movie" 
+                          ? "border-purple-100 hover:border-purple-300" 
+                          : "border-gray-100 hover:border-orange-300"
+                      }`}
                     >
                       {/* Interactive hover glowing accent */}
-                      <div className="absolute top-0 left-0 w-1.5 h-full bg-orange-500 group-hover:scale-y-110 transition-transform" />
+                      <div className={`absolute top-0 left-0 w-1.5 h-full group-hover:scale-y-110 transition-transform ${
+                        evt.type === "Movie" ? "bg-purple-500" : "bg-orange-500"
+                      }`} />
 
                       <div className="space-y-4">
                         {/* Event Category / Time remaining */}
                         <div className="flex justify-between items-start gap-4">
-                          <span className="inline-block px-2.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-orange-50 text-orange-600 border border-orange-100">
-                            {evt.type}
+                          <span className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase ${
+                            evt.type === "Movie" 
+                              ? "bg-purple-50 text-purple-600 border border-purple-100" 
+                              : "bg-orange-50 text-orange-600 border border-orange-100"
+                          }`}>
+                            {evt.type === "Movie" ? "🎬 Movie Night" : evt.type}
                           </span>
                           {evt.deadline ? (
                             <span className={`text-xs font-bold ${
@@ -278,11 +329,20 @@ ${evt.googleMapsUrl ? `🔗 *Google Maps:* ${evt.googleMapsUrl}\n` : ""}⏳ *Ord
                         {/* Title & Restaurant info */}
                         <div className="space-y-1">
                           <h4 className="text-lg font-extrabold text-gray-900 group-hover:text-orange-600 transition-colors leading-snug">
-                            {evt.name || "Comedy Group Dinner"}
+                            {evt.movieName || evt.name || (evt.type === "Movie" ? "Movie Night" : "Comedy Group Dinner")}
                           </h4>
                           <div className="flex items-center gap-1 text-gray-500 text-xs font-medium">
-                            <MapPin size={12} />
-                            <span className="truncate">{evt.restaurant}</span>
+                            {evt.type === "Movie" ? (
+                              <>
+                                <span>🎬</span>
+                                <span className="truncate">{evt.movieVenue || evt.restaurant}</span>
+                              </>
+                            ) : (
+                              <>
+                                <MapPin size={12} />
+                                <span className="truncate">{evt.restaurant}</span>
+                              </>
+                            )}
                           </div>
                         </div>
 

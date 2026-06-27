@@ -27,7 +27,6 @@ export default function MasterPage({
   const [famPin, setFamPin] = useState<string>("");
   const [famAdults, setFamAdults] = useState<string>("");
   const [famChildren, setFamChildren] = useState<string>("");
-  const [famPhoto, setFamPhoto] = useState<string>("");
 
   // --- Food Items CRUD State ---
   const [selectedSection, setSelectedSection] = useState<keyof Menu>("starters");
@@ -52,7 +51,6 @@ export default function MasterPage({
     setFamPin("");
     setFamAdults("");
     setFamChildren("");
-    setFamPhoto("");
     setError("");
     setSuccess("");
     setShowFamilyModal(true);
@@ -65,7 +63,6 @@ export default function MasterPage({
     setFamPin(family.pin);
     setFamAdults(family.adults.join(", "));
     setFamChildren(family.children.join(", "));
-    setFamPhoto(family.photoUrl);
     setError("");
     setSuccess("");
     setShowFamilyModal(true);
@@ -91,8 +88,7 @@ export default function MasterPage({
       name: famName,
       pin: famPin,
       adults: famAdults.split(",").map(a => a.trim()).filter(Boolean),
-      children: famChildren.split(",").map(c => c.trim()).filter(Boolean),
-      photoUrl: famPhoto.trim() || undefined
+      children: famChildren.split(",").map(c => c.trim()).filter(Boolean)
     };
 
     try {
@@ -283,11 +279,9 @@ export default function MasterPage({
                 className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
               >
                 <div className="flex items-start gap-4">
-                  <img
-                    src={fam.photoUrl}
-                    alt={fam.name}
-                    className="w-12 h-12 rounded-xl object-cover border border-gray-100 shadow-sm shrink-0"
-                  />
+                  <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 font-black text-lg shrink-0">
+                    {fam.name.charAt(0).toUpperCase()}
+                  </div>
                   <div className="space-y-1 truncate">
                     <h4 className="font-extrabold text-gray-800 text-sm flex items-center gap-1.5">
                       {fam.name}

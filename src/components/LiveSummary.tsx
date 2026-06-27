@@ -79,6 +79,9 @@ export default function LiveSummary({ event, families, rsvps, menu, onBack }: Li
 
   // 4. Create Beautiful text summary for WhatsApp sharing
   const generateTextSummary = (): string => {
+    const appLink = window.location.origin;
+    const imageLink = `${appLink}/comedy_group.png`;
+
     let text = `*🎭 Comedy Group Dinner Planning 🎭*\n`;
     text += `*Occasion:* ${event.name || "Comedy Group Dinner"}\n`;
     text += `*Date:* ${new Date(event.date).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}\n`;
@@ -121,6 +124,7 @@ export default function LiveSummary({ event, families, rsvps, menu, onBack }: Li
     }
 
     text += `\n_Generated from Comedy Group Planner Web App_ 📱`;
+    text += `\n📷 *Preview:* ${imageLink}`;
     return text;
   };
 
@@ -238,12 +242,9 @@ export default function LiveSummary({ event, families, rsvps, menu, onBack }: Li
                     className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100 print:border-black/10"
                   >
                     <div className="flex items-center gap-3">
-                      <img
-                        src={f.photoUrl}
-                        alt={f.name}
-                        referrerPolicy="no-referrer"
-                        className="w-9 h-9 rounded-lg object-cover ring-1 ring-gray-100 print:hidden"
-                      />
+                      <div className="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600 font-black text-xs">
+                        {f.name.charAt(0).toUpperCase()}
+                      </div>
                       <div>
                         <span className="font-extrabold text-xs text-gray-800 print:text-black">{f.name}</span>
                         {isYes ? (

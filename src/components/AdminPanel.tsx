@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Event, Family, Menu, MenuItem } from "../types";
-import { Plus, Trash2, Calendar, MapPin, Clock, Edit2, ShieldAlert, Sparkles, Bell, HelpCircle, Save, X } from "lucide-react";
+import { Plus, Trash2, Calendar, MapPin, Clock, Edit2, ShieldAlert, Sparkles, Bell, HelpCircle, Save, X, Film } from "lucide-react";
 
 interface AdminPanelProps {
   currentFamily: Family;
@@ -34,7 +34,7 @@ export default function AdminPanel({
   const [loading, setLoading] = useState<boolean>(false);
 
   // Active Admin Sub-Tab
-  const [subTab, setSubTab] = useState<"createEvent" | "menuEditor" | "sendAlert" | "aiAssistant">("createEvent");
+  const [subTab, setSubTab] = useState<"createEvent" | "movieEvent" | "menuEditor" | "sendAlert" | "aiAssistant">("createEvent");
 
   // --- Edit Event State ---
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -63,6 +63,19 @@ export default function AdminPanel({
   const [evtMaps, setEvtMaps] = useState<string>("");
   const [evtDeadline, setEvtDeadline] = useState<string>("");
   const [evtNotes, setEvtNotes] = useState<string>("");
+
+  // --- Movie Event Creator State ---
+  const [mvEvtName, setMvEvtName] = useState<string>("");
+  const [mvEvtHostFamily, setMvEvtHostFamily] = useState<string>(
+    currentFamily.id === "admin" ? "sharma" : currentFamily.id
+  );
+  const [mvEvtDate, setMvEvtDate] = useState<string>("");
+  const [mvEvtTime, setMvEvtTime] = useState<string>("");
+  const [mvEvtVenue, setMvEvtVenue] = useState<string>("");
+  const [mvEvtAddress, setMvEvtAddress] = useState<string>("");
+  const [mvEvtMaps, setMvEvtMaps] = useState<string>("");
+  const [mvEvtDeadline, setMvEvtDeadline] = useState<string>("");
+  const [mvEvtNotes, setMvEvtNotes] = useState<string>("");
 
   // --- 2. Menu Editor State ---
   const [menuSection, setMenuSection] = useState<keyof Menu>("starters");
@@ -103,7 +116,6 @@ export default function AdminPanel({
     setSuccess("");
 
     try {
-      // Set final deadline to event date & time if left empty
       const finalDeadline = evtDeadline 
         ? new Date(evtDeadline).toISOString() 
         : new Date(`${evtDate}T${evtTime}`).toISOString();
@@ -122,7 +134,6 @@ export default function AdminPanel({
       });
 
       setSuccess("Dinner scheduled successfully! Everyone was notified.");
-      // Reset form
       setEvtName("");
       setEvtRestaurant("");
       setEvtAddress("");
@@ -131,6 +142,57 @@ export default function AdminPanel({
       setEvtNotes("");
     } catch (err: any) {
       setError(err.message || "Failed to create event.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Create Movie Event Handler
+  const handleCreateMovieEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mvEvtDate || !mvEvtTime) {
+      setError("Please fill out Date and Time.");
+      return;
+    }
+    if (!mvEvtName) {
+      setError("Please enter the Movie Name.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const finalDeadline = mvEvtDeadline 
+        ? new Date(mvEvtDeadline).toISOString() 
+        : new Date(`${mvEvtDate}T${mvEvtTime}`).toISOString();
+
+      await onCreateEvent({
+        name: mvEvtName,
+        type: "Movie",
+        hostFamilyId: mvEvtHostFamily,
+        date: mvEvtDate,
+        time: mvEvtTime,
+        restaurant: mvEvtVenue,
+        address: mvEvtAddress,
+        googleMapsUrl: mvEvtMaps,
+        deadline: finalDeadline,
+        notes: mvEvtNotes,
+        movieName: mvEvtName,
+        movieVenue: mvEvtVenue,
+        movieShowtime: mvEvtTime
+      });
+
+      setSuccess("Movie Night scheduled successfully! Everyone was notified.");
+      setMvEvtName("");
+      setMvEvtVenue("");
+      setMvEvtAddress("");
+      setMvEvtMaps("");
+      setMvEvtDeadline("");
+      setMvEvtNotes("");
+    } catch (err: any) {
+      setError(err.message || "Failed to create movie event.");
     } finally {
       setLoading(false);
     }
@@ -225,6 +287,7 @@ export default function AdminPanel({
     const hostName = families.find(f => f.id === evt.hostFamilyId)?.name || "Comedy Group Host";
     const dlString = evt.deadline ? new Date(evt.deadline).toLocaleString() : "TBD";
     const appLink = window.location.origin;
+    const imageLink = `${appLink}/comedy_group.png`;
 
     const message = `🎭 *New Comedy Group Dinner scheduled!*
 🎉 *Occasion:* ${evt.name} (${evt.type})
@@ -237,7 +300,8 @@ ${evt.googleMapsUrl ? `🔗 *Google Maps:* ${evt.googleMapsUrl}\n` : ""}⏳ *Ord
 💬 *Notes:* ${evt.notes || "Join us for great laughs and delicious food!"}
 
 👇 *Submit your RSVP & Food Order here:*
-🔗 ${appLink}`;
+🔗 ${appLink}
+📷 *Preview:* ${imageLink}`;
 
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
   };
@@ -383,6 +447,15 @@ ${evt.googleMapsUrl ? `🔗 *Google Maps:* ${evt.googleMapsUrl}\n` : ""}⏳ *Ord
         >
           <Calendar size={13} className="inline-block mr-1.5" />
           Schedule Dinner
+        </button>
+        <button
+          onClick={() => { setSubTab("movieEvent"); setError(""); setSuccess(""); }}
+          className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            subTab === "movieEvent" ? "bg-purple-600 text-white shadow-md" : "text-gray-500 hover:bg-gray-200/60"
+          }`}
+        >
+          <Film size={13} className="inline-block mr-1.5" />
+          Movie Time
         </button>
         <button
           onClick={() => { setSubTab("menuEditor"); setError(""); setSuccess(""); }}
@@ -551,7 +624,128 @@ ${evt.googleMapsUrl ? `🔗 *Google Maps:* ${evt.googleMapsUrl}\n` : ""}⏳ *Ord
         </form>
       )}
 
-      {/* --- Tab 2: Menu Editor --- */}
+      {/* --- Tab 2: Movie Time --- */}
+      {subTab === "movieEvent" && (
+        <form onSubmit={handleCreateMovieEvent} className="bg-white border border-purple-100 rounded-3xl p-6 shadow-sm space-y-5">
+          <h4 className="text-base font-black text-gray-800 flex items-center gap-1.5">
+            <Film size={16} className="text-purple-600" />
+            Plan Movie Night
+          </h4>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs text-gray-500 font-bold block">Movie Name *</label>
+              <input
+                type="text"
+                placeholder="e.g. Pathaan, Jawan, Dunki"
+                value={mvEvtName}
+                onChange={(e) => setMvEvtName(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-purple-50 border border-purple-200 text-gray-800 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              />
+            </div>
+
+            {currentFamily.id === "admin" ? (
+              <div className="space-y-1.5">
+                <label className="text-xs text-gray-500 font-bold block">Host Family (Captain)</label>
+                <select
+                  value={mvEvtHostFamily}
+                  onChange={(e) => setMvEvtHostFamily(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                >
+                  {families.map((f) => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs text-gray-500 font-bold block">Date</label>
+                <input
+                  type="date"
+                  value={mvEvtDate}
+                  onChange={(e) => setMvEvtDate(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-purple-50 border border-purple-200 text-gray-800 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-gray-500 font-bold block">Time</label>
+                <input
+                  type="time"
+                  value={mvEvtTime}
+                  onChange={(e) => setMvEvtTime(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-purple-50 border border-purple-200 text-gray-800 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs text-gray-500 font-bold block">Cinema / Venue</label>
+              <input
+                type="text"
+                placeholder="e.g. INOX, PVR, Cinepolis"
+                value={mvEvtVenue}
+                onChange={(e) => setMvEvtVenue(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-purple-50 border border-purple-200 text-gray-800 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs text-gray-500 font-bold block">Google Maps Link (Optional)</label>
+              <input
+                type="text"
+                placeholder="https://maps.google.com/..."
+                value={mvEvtMaps}
+                onChange={(e) => setMvEvtMaps(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              />
+            </div>
+
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-xs text-gray-500 font-bold block">Venue Address</label>
+              <input
+                type="text"
+                placeholder="e.g. 3rd Floor, R-City Mall, Ghatkopar"
+                value={mvEvtAddress}
+                onChange={(e) => setMvEvtAddress(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-purple-50 border border-purple-200 text-gray-800 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs text-gray-500 font-bold block">RSVP Deadline (Optional)</label>
+              <input
+                type="datetime-local"
+                value={mvEvtDeadline}
+                onChange={(e) => setMvEvtDeadline(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              />
+            </div>
+
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-xs text-gray-500 font-bold block">Notes</label>
+              <textarea
+                rows={3}
+                placeholder="Add any notes: e.g. Snacks arranged, meet at lobby..."
+                value={mvEvtNotes}
+                onChange={(e) => setMvEvtNotes(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-purple-50 border border-purple-200 text-gray-800 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 placeholder:text-gray-400"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 font-black text-white rounded-2xl text-sm transition-all shadow-md active:scale-[0.99]"
+          >
+            {loading ? "Scheduling movie night..." : "🎬 Publish Movie Night"}
+          </button>
+        </form>
+      )}
+
+      {/* --- Tab 3: Menu Editor --- */}
       {subTab === "menuEditor" && (
         <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm space-y-6">
           <div className="flex justify-between items-center">

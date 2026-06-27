@@ -3,6 +3,7 @@ import { Family, Event, RSVP, Menu, DbState, MenuItem, GroupNotification } from 
 import LoginScreen from "./components/LoginScreen";
 import Dashboard from "./components/Dashboard";
 import EventDetails from "./components/EventDetails";
+import MovieEventDetails from "./components/MovieEventDetails";
 import LiveSummary from "./components/LiveSummary";
 import Reports from "./components/Reports";
 import AdminPanel from "./components/AdminPanel";
@@ -289,18 +290,32 @@ export default function App() {
         
         {/* If viewing detailed event RSVP form */}
         {showEventDetails && selectedEvent ? (
-          <EventDetails
-            event={selectedEvent}
-            currentFamily={currentFamily}
-            families={dbState.families}
-            rsvps={dbState.rsvps}
-            menu={dbState.menu}
-            onBack={() => {
-              setShowEventDetails(false);
-              setSelectedEvent(null);
-            }}
-            onSubmitRsvp={handleRsvpSubmit}
-          />
+          selectedEvent.type === "Movie" ? (
+            <MovieEventDetails
+              event={selectedEvent}
+              currentFamily={currentFamily}
+              families={dbState.families}
+              rsvps={dbState.rsvps}
+              onBack={() => {
+                setShowEventDetails(false);
+                setSelectedEvent(null);
+              }}
+              onSubmitRsvp={handleRsvpSubmit}
+            />
+          ) : (
+            <EventDetails
+              event={selectedEvent}
+              currentFamily={currentFamily}
+              families={dbState.families}
+              rsvps={dbState.rsvps}
+              menu={dbState.menu}
+              onBack={() => {
+                setShowEventDetails(false);
+                setSelectedEvent(null);
+              }}
+              onSubmitRsvp={handleRsvpSubmit}
+            />
+          )
         ) : (
           <>
             {/* Standard Tabs */}

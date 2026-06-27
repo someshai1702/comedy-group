@@ -1,17 +1,18 @@
 {
-  "name": "Comedy Group Dinner Planner",
+  "name": "Comedy Group Planner",
   "short_name": "Comedy Planner",
-  "description": "RSVP and Food Order Planner for the Comedy Group family dinners and parties.",
+  "description": "RSVP and Food Order Planner for the Comedy Group family dinners, parties and movie nights.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#ec4899",
+  "background_color": "#fafafa",
+  "theme_color": "#f97316",
   "orientation": "portrait-primary",
+  "categories": ["lifestyle", "social"],
   "icons": [
     {
-      "src": "/src/assets/images/app_logo_1782538096677.jpg",
+      "src": "/comedy_group.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
