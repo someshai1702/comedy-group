@@ -123,8 +123,8 @@ export function showLocalNotification(title: string, body: string, options?: Not
   navigator.serviceWorker.ready.then((registration) => {
     registration.showNotification(title, {
       body,
-      icon: "/icon-192.png",
-      badge: "/icon-72.png",
+      icon: "/comedy_group.png",
+      badge: "/comedy_group.png",
       tag: "comedy-group",
       vibrate: [200, 100, 200],
       requireInteraction: true,
@@ -138,32 +138,32 @@ export const NotificationTemplates = {
   newEvent: (eventName: string, host: string) => ({
     title: "🎉 New Event Created!",
     body: `${eventName} - Hosted by ${host}. Tap to RSVP now!`,
-    icon: "/icon-192.png",
-    badge: "/icon-72.png",
+    icon: "/comedy_group.png",
+    badge: "/comedy_group.png",
     tag: "new-event"
   }),
 
   eventReminder: (eventName: string, deadline: string) => ({
     title: "⏰ Event Reminder",
     body: `${eventName} - Vote before ${deadline}`,
-    icon: "/icon-192.png",
-    badge: "/icon-72.png",
+    icon: "/comedy_group.png",
+    badge: "/comedy_group.png",
     tag: "event-reminder"
   }),
 
   eventUpdate: (eventName: string) => ({
     title: "📢 Event Update",
     body: `${eventName} has been updated. Check the latest details!`,
-    icon: "/icon-192.png",
-    badge: "/icon-72.png",
+    icon: "/comedy_group.png",
+    badge: "/comedy_group.png",
     tag: "event-update"
   }),
 
   ticketUpdate: (eventName: string, totalTickets: number) => ({
     title: "🎟️ Ticket Update",
     body: `${eventName}: ${totalTickets} tickets confirmed`,
-    icon: "/icon-192.png",
-    badge: "/icon-72.png",
+    icon: "/comedy_group.png",
+    badge: "/comedy_group.png",
     tag: "ticket-update"
   })
 };
