@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Event, Family, RSVP, Menu, MenuItem } from "../types";
-import { MapPin, Calendar, Clock, ChevronLeft, AlertCircle, Save, Info, Plus, Minus, Check, Lock, ShieldAlert } from "lucide-react";
+import { Event, Family, RSVP, Menu } from "../types";
+import { MapPin, Calendar, Clock, ChevronLeft, AlertCircle, Save, Info, Plus, Minus, Check, ShieldAlert } from "lucide-react";
 
 interface EventDetailsProps {
   event: Event;
@@ -26,7 +26,8 @@ export default function EventDetails({
     const hostName = families.find(f => f.id === event.hostFamilyId)?.name || "Comedy Group Host";
     const dlString = event.deadline ? new Date(event.deadline).toLocaleString() : "TBD";
     const appLink = window.location.origin;
-    
+    const imageLink = `${appLink}/comedy_group.png`;
+
     const message = `🎭 *New Comedy Group Dinner scheduled!*
 🎉 *Occasion:* ${event.name} (${event.type})
 👑 *Host:* ${hostName}
@@ -38,7 +39,9 @@ ${event.googleMapsUrl ? `🔗 *Google Maps:* ${event.googleMapsUrl}\n` : ""}⏳ 
 💬 *Notes:* ${event.notes || "Join us for great laughs and delicious food!"}
 
 👇 *Submit your RSVP & Food Order here:*
-🔗 ${appLink}/;
+🔗 ${appLink}
+📷 *Preview:* ${imageLink}`;
+
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
   };
 

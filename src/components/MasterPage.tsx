@@ -27,6 +27,7 @@ export default function MasterPage({
   const [famPin, setFamPin] = useState<string>("");
   const [famAdults, setFamAdults] = useState<string>("");
   const [famChildren, setFamChildren] = useState<string>("");
+  const [famPhoto, setFamPhoto] = useState<string>("");
 
   // --- Food Items CRUD State ---
   const [selectedSection, setSelectedSection] = useState<keyof Menu>("starters");
@@ -51,6 +52,7 @@ export default function MasterPage({
     setFamPin("");
     setFamAdults("");
     setFamChildren("");
+    setFamPhoto("");
     setError("");
     setSuccess("");
     setShowFamilyModal(true);
@@ -63,6 +65,7 @@ export default function MasterPage({
     setFamPin(family.pin);
     setFamAdults(family.adults.join(", "));
     setFamChildren(family.children.join(", "));
+    setFamPhoto((family as any).photoUrl || "");
     setError("");
     setSuccess("");
     setShowFamilyModal(true);
