@@ -303,7 +303,50 @@ app.post("/api/login", async (req, res) => {
     return res.status(400).json({ error: "Family ID and PIN are required" });
   }
 
-  const db = await readDatabase();
+  let db = await readDatabase();
+  
+  // Auto-create admin family if not exists
+  if (familyId === "admin") {
+    const adminExists = db.families.find((f: any) => f.id === "admin");
+    if (!adminExists) {
+      console.log("Creating admin family...");
+      // Create admin with default PIN 1234
+      db.families.push({
+        id: "admin",
+        name: "Master",
+        adults: [{ name: "Admin" }],
+        children: [],
+        pin: "1234",
+        photoUrl: null,
+        isAdmin: true
+      });
+      
+      // Save to Supabase if available
+      if (supabase) {
+        try {
+          await supabase.from("families").upsert([{
+            id: "admin",
+            name: "Master",
+            adults: [{ name: "Admin" }],
+            children: [],
+            pin: "1234",
+            is_admin: true
+          }]);
+        } catch (err) {
+          console.error("Error creating admin in Supabase:", err);
+        }
+      }
+    }
+    
+    // Check PIN
+    const adminFamily = db.families.find((f: any) => f.id === "admin");
+    if (adminFamily && adminFamily.pin === pin) {
+      return res.json({ success: true, family: adminFamily });
+    } else {
+      return res.status(401).json({ error: "Incorrect 4-digit PIN" });
+    }
+  }
+
   const family = db.families.find((f: any) => f.id === familyId);
 
   if (!family) {
