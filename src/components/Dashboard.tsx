@@ -30,7 +30,7 @@ export default function Dashboard({
     const hostName = families.find(f => f.id === evt.hostFamilyId)?.name || "Comedy Group Host";
     const dlString = evt.deadline ? new Date(evt.deadline).toLocaleString() : "TBD";
     const appLink = window.location.origin;
-    const imageLink = `${appLink}/comedy_group.png`;
+    const imageLink = `${appLink}/icon-512.png`;
 
     // For Movie events, include ticket count
     if (evt.type === "Movie") {
