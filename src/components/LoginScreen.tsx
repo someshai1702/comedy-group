@@ -257,7 +257,7 @@ export default function LoginScreen({ families, onLoginSuccess }: LoginScreenPro
                   Select Your Family
                 </label>
                 <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                  {families.map((fam) => {
+                  {families.filter(fam => fam.id !== "admin").map((fam) => {
                     const isSelected = fam.id === selectedFamilyId;
                     return (
                       <button

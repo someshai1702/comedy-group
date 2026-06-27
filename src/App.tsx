@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Family, Event, RSVP, Menu, DbState, MenuItem, GroupNotification } from "./types";
 import LoginScreen from "./components/LoginScreen";
+import MasterLogin from "./components/MasterLogin";
 import Dashboard from "./components/Dashboard";
 import EventDetails from "./components/EventDetails";
 import MovieEventDetails from "./components/MovieEventDetails";
@@ -32,8 +33,14 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [syncing, setSyncing] = useState<boolean>(false);
 
+  // Check if we're on master login page
+  const isMasterLogin = window.location.pathname === "/master";
+
   // Load active session from LocalStorage (provides instant offline boot!)
   useEffect(() => {
+    // Skip localStorage check if on master login
+    if (isMasterLogin) return;
+    
     const savedFamily = localStorage.getItem("comedy_planner_family");
     if (savedFamily) {
       try {
@@ -42,7 +49,7 @@ export default function App() {
         console.error("Failed to parse stored family session:", err);
       }
     }
-  }, []);
+  }, [isMasterLogin]);
 
   // Fetch full DB state from full-stack express server
   const fetchDbState = async () => {
@@ -232,6 +239,16 @@ export default function App() {
         <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
         <p className="text-sm text-gray-500 font-medium">Booting Comedy Group Console...</p>
       </div>
+    );
+  }
+
+  // Render Master Login page if on /master route
+  if (isMasterLogin) {
+    return (
+      <MasterLogin
+        families={dbState.families}
+        onLoginSuccess={handleLoginSuccess}
+      />
     );
   }
 
