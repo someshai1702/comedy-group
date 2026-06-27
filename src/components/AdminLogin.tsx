@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Family } from "../types";
 import { ShieldAlert, AlertTriangle } from "lucide-react";
 
@@ -12,21 +12,27 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
   const [loading, setLoading] = useState<boolean>(false);
 
   const handlePinInput = (num: string) => {
-    if (pin.length < 4) {
+    if (pin.length < 4 && !loading) {
       setPin(pin + num);
       setError("");
     }
   };
 
   const handleBackspace = () => {
-    setPin(pin.slice(0, -1));
+    if (!loading) {
+      setPin(pin.slice(0, -1));
+    }
   };
 
-  const handleSubmit = async () => {
-    if (pin.length !== 4) {
-      setError("Please enter a 4-digit PIN.");
-      return;
+  const handleClear = () => {
+    if (!loading) {
+      setPin("");
+      setError("");
     }
+  };
+
+  const handleSubmit = useCallback(async () => {
+    if (pin.length !== 4 || loading) return;
 
     setLoading(true);
     setError("");
@@ -48,17 +54,19 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
     } catch (err: any) {
       setError(err.message || "Invalid PIN. Please try again.");
       setPin("");
-    } finally {
       setLoading(false);
     }
-  };
+  }, [pin, loading, onLoginSuccess]);
 
   // Auto-submit when PIN reaches 4 digits
-  React.useEffect(() => {
-    if (pin.length === 4) {
+  useEffect(() => {
+    if (pin.length === 4 && !loading) {
       handleSubmit();
     }
-  }, [pin]);
+  }, [pin, loading, handleSubmit]);
+
+  const isPinComplete = pin.length === 4;
+  const isPinEmpty = pin.length === 0;
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center px-4 py-8 relative overflow-hidden bg-[#fafafa]">
@@ -76,7 +84,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
             Admin Access
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            Enter your admin PIN to continue
+            {loading ? "Verifying PIN..." : "Enter your admin PIN to continue"}
           </p>
         </div>
 
@@ -91,7 +99,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
         <div className="space-y-6">
           <div className="text-center">
             <p className="text-xs text-gray-500">
-              Enter 4-digit Admin PIN
+              {loading ? "Please wait..." : "Enter 4-digit Admin PIN"}
             </p>
             {/* Dots indicator */}
             <div className="flex justify-center gap-4 mt-3">
@@ -99,7 +107,9 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                 <div
                   key={idx}
                   className={`w-3.5 h-3.5 rounded-full border transition-all duration-150 ${
-                    idx < pin.length
+                    loading && idx < 4
+                      ? "bg-orange-500 border-orange-400 scale-125 shadow-sm shadow-orange-100 animate-pulse"
+                      : idx < pin.length
                       ? "bg-orange-500 border-orange-400 scale-125 shadow-sm shadow-orange-100"
                       : "border-gray-200 bg-gray-50"
                   }`}
@@ -116,16 +126,16 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                 type="button"
                 onClick={() => handlePinInput(num)}
                 disabled={loading}
-                className="aspect-square flex items-center justify-center text-lg font-bold rounded-2xl bg-white border border-gray-150 hover:bg-gray-50 active:scale-95 transition-all text-gray-800 shadow-sm"
+                className="aspect-square flex items-center justify-center text-lg font-bold rounded-2xl bg-white border border-gray-150 hover:bg-gray-50 active:scale-95 transition-all text-gray-800 shadow-sm disabled:opacity-50"
               >
                 {num}
               </button>
             ))}
             <button
               type="button"
-              onClick={() => setPin("")}
+              onClick={handleClear}
               disabled={loading}
-              className="text-xs font-bold rounded-2xl bg-gray-50 border border-gray-100 hover:bg-gray-100 active:scale-95 transition-all text-gray-500 flex items-center justify-center"
+              className="text-xs font-bold rounded-2xl bg-gray-50 border border-gray-100 hover:bg-gray-100 active:scale-95 transition-all text-gray-500 flex items-center justify-center disabled:opacity-50"
             >
               Clear
             </button>
@@ -133,7 +143,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
               type="button"
               onClick={() => handlePinInput("0")}
               disabled={loading}
-              className="aspect-square flex items-center justify-center text-lg font-bold rounded-2xl bg-white border border-gray-150 hover:bg-gray-50 active:scale-95 transition-all text-gray-800 shadow-sm"
+              className="aspect-square flex items-center justify-center text-lg font-bold rounded-2xl bg-white border border-gray-150 hover:bg-gray-50 active:scale-95 transition-all text-gray-800 shadow-sm disabled:opacity-50"
             >
               0
             </button>
@@ -141,21 +151,23 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
               type="button"
               onClick={handleBackspace}
               disabled={loading}
-              className="aspect-square flex items-center justify-center text-sm font-bold rounded-2xl bg-gray-50 border border-gray-100 hover:bg-gray-100 active:scale-95 transition-all text-gray-500"
+              className="aspect-square flex items-center justify-center text-sm font-bold rounded-2xl bg-gray-50 border border-gray-100 hover:bg-gray-100 active:scale-95 transition-all text-gray-500 disabled:opacity-50"
             >
               ⌫
             </button>
           </div>
         </div>
 
-        <div className="mt-6 text-center">
-          <a
-            href="/"
-            className="text-xs text-gray-400 hover:text-orange-500 font-semibold transition-colors"
-          >
-            ← Back to Family Login
-          </a>
-        </div>
+        {!loading && (
+          <div className="mt-6 text-center">
+            <a
+              href="/"
+              className="text-xs text-gray-400 hover:text-orange-500 font-semibold transition-colors"
+            >
+              ← Back to Family Login
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );
