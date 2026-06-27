@@ -26,8 +26,7 @@ export default function EventDetails({
     const hostName = families.find(f => f.id === event.hostFamilyId)?.name || "Comedy Group Host";
     const dlString = event.deadline ? new Date(event.deadline).toLocaleString() : "TBD";
     const appLink = window.location.origin;
-    const imageLink = `/public/comedy_group.png`;
-
+    
     const message = `🎭 *New Comedy Group Dinner scheduled!*
 🎉 *Occasion:* ${event.name} (${event.type})
 👑 *Host:* ${hostName}
