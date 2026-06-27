@@ -129,6 +129,10 @@ ${event.deadline ? `\n⏳ *RSVP Deadline:* ${dlString}\n` : ""}
         specialInstructions: attending === "Yes" ? `Movie: ${event.movieName || event.name}, Tickets: ${ticketsCount}` : ""
       });
       setSuccess(true);
+      // Redirect to dashboard after successful save
+      setTimeout(() => {
+        onBack();
+      }, 1000);
     } catch (err: any) {
       setError(err.message || "Failed to submit. Please try again.");
     } finally {

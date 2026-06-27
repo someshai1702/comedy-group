@@ -268,18 +268,15 @@ export default function LoginScreen({ families, onLoginSuccess }: LoginScreenPro
                           setPin("");
                           setError("");
                         }}
-                        className={`flex items-center gap-3 p-2.5 rounded-2xl border text-left transition-all ${
+                        className={`flex items-center gap-2 p-3 rounded-2xl border text-left transition-all ${
                           isSelected
-                            ? "bg-orange-55 border-orange-200 shadow-sm font-black"
+                            ? "bg-orange-50 border-orange-200 shadow-sm font-black"
                             : "bg-white border-gray-100 hover:bg-gray-50"
                         }`}
                       >
-                        <img
-                          src={fam.photoUrl}
-                          alt={fam.name}
-                          referrerPolicy="no-referrer"
-                          className="w-10 h-10 rounded-xl object-cover ring-2 ring-gray-100"
-                        />
+                        <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600 font-black text-sm">
+                          {fam.name.charAt(0).toUpperCase()}
+                        </div>
                         <div className="truncate">
                           <div className="text-xs font-bold text-gray-800 truncate">
                             {fam.name}
