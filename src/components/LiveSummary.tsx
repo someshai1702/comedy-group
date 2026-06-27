@@ -238,12 +238,9 @@ export default function LiveSummary({ event, families, rsvps, menu, onBack }: Li
                     className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100 print:border-black/10"
                   >
                     <div className="flex items-center gap-3">
-                      <img
-                        src={f.photoUrl}
-                        alt={f.name}
-                        referrerPolicy="no-referrer"
-                        className="w-9 h-9 rounded-lg object-cover ring-1 ring-gray-100 print:hidden"
-                      />
+                      <div className="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600 font-black text-xs">
+                        {f.name.charAt(0).toUpperCase()}
+                      </div>
                       <div>
                         <span className="font-extrabold text-xs text-gray-800 print:text-black">{f.name}</span>
                         {isYes ? (

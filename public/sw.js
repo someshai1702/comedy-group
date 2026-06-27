@@ -1,8 +1,17 @@
-const CACHE_NAME = "comedy-planner-v1";
+const CACHE_NAME = "comedy-planner-v2";
 const ASSETS_TO_CACHE = [
   "/",
   "/index.html",
   "/manifest.json",
+  "/icons/favicon.svg",
+  "/icons/icon-72.png",
+  "/icons/icon-96.png",
+  "/icons/icon-128.png",
+  "/icons/icon-144.png",
+  "/icons/icon-152.png",
+  "/icons/icon-192.png",
+  "/icons/icon-384.png",
+  "/icons/icon-512.png",
   "/src/main.tsx",
   "/src/index.css",
   "/src/App.tsx",
