@@ -1,33 +1,8 @@
-const CACHE_NAME = "comedy-planner-v5";
-const ASSETS_TO_CACHE = [
-  "/",
-  "/index.html",
-  "/manifest.json",
-  "/comedy_group.png",
-  "/icon-72.png",
-  "/icon-96.png",
-  "/icon-128.png",
-  "/icon-144.png",
-  "/icon-152.png",
-  "/icon-192.png",
-  "/icon-384.png",
-  "/icon-512.png",
-  "/src/main.tsx",
-  "/src/index.css",
-  "/src/App.tsx",
-  "/src/types.ts"
-];
+const CACHE_NAME = "comedy-planner-v6";
 
 // Install Event
 self.addEventListener("install", (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log("[Service Worker] Caching App Shell");
-      return cache.addAll(ASSETS_TO_CACHE);
-    }).catch(err => {
-      console.error("[Service Worker] Cache open error: ", err);
-    })
-  );
+  console.log("[Service Worker] Installing...");
   self.skipWaiting();
 });
 
@@ -48,74 +23,70 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
-// Fetch Event - Cache First with Network Fallback
+// Fetch Event - Network First with Cache Fallback
 self.addEventListener("fetch", (e) => {
-  // Only cache GET requests, skip API routes
-  if (e.request.method !== "GET" || e.request.url.includes("/api/")) {
-    return;
-  }
-
+  if (e.request.method !== "GET") return;
+  
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(e.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== "basic") {
-          return networkResponse;
+    fetch(e.request)
+      .then((response) => {
+        if (!response || response.status !== 200 || response.type !== "basic") {
+          return response;
         }
-        // Cache newly fetched assets
-        const responseToCache = networkResponse.clone();
+        const responseToCache = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(e.request, responseToCache);
         });
-        return networkResponse;
-      }).catch(() => {
-        // Fallback for offline mode
-        return caches.match("/");
-      });
-    })
+        return response;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
 
-// Push Notification Event
+// Push Notification Event - Enhanced with Sound & Badges
 self.addEventListener("push", (e) => {
-  let data = {
-    title: "Comedy Group",
+  let notificationData = {
+    title: "🎉 Comedy Group",
     body: "You have a new notification!",
     icon: "/icon-192.png",
     badge: "/icon-72.png",
-    tag: "comedy-group-notification",
-    vibrate: [100, 50, 100],
-    requireInteraction: true
+    tag: "comedy-group",
+    vibrate: [200, 100, 200, 100, 200],
+    requireInteraction: true,
+    silent: false,
+    timestamp: Date.now()
   };
 
   if (e.data) {
     try {
       const payload = e.data.json();
-      data = {
-        ...data,
-        title: payload.title || data.title,
-        body: payload.body || data.body,
-        icon: payload.icon || data.icon,
-        tag: payload.tag || data.tag
+      notificationData = {
+        ...notificationData,
+        ...payload,
+        icon: payload.icon || "/icon-192.png",
+        badge: payload.badge || "/icon-72.png"
       };
     } catch (err) {
-      data.body = e.data.text() || data.body;
+      notificationData.body = e.data.text() || notificationData.body;
     }
   }
 
   e.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: data.icon,
-      badge: data.badge,
-      tag: data.tag,
-      vibrate: data.vibrate,
-      requireInteraction: data.requireInteraction,
+    self.registration.showNotification(notificationData.title, {
+      body: notificationData.body,
+      icon: notificationData.icon,
+      badge: notificationData.badge,
+      tag: notificationData.tag,
+      vibrate: notificationData.vibrate,
+      requireInteraction: notificationData.requireInteraction,
+      timestamp: notificationData.timestamp,
+      data: {
+        url: notificationData.url || "/",
+        dateOfArrival: Date.now()
+      },
       actions: [
-        { action: "open", title: "View" },
-        { action: "dismiss", title: "Dismiss" }
+        { action: "open", title: "📱 Open App" },
+        { action: "dismiss", title: "❌ Dismiss" }
       ]
     })
   );
@@ -129,25 +100,45 @@ self.addEventListener("notificationclick", (e) => {
     return;
   }
 
+  const targetUrl = e.notification.data?.url || "/";
+
   e.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      // If app is already open, focus it
+      // Focus existing window if available
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && "focus" in client) {
+          client.navigate(targetUrl);
           return client.focus();
         }
       }
-      // Otherwise open a new window
+      // Open new window
       if (clients.openWindow) {
-        return clients.openWindow("/");
+        return clients.openWindow(targetUrl);
       }
     })
   );
 });
 
-// Background Sync for offline notifications (optional)
+// Message handler for direct notifications from the app
+self.addEventListener("message", (e) => {
+  if (e.data && e.data.type === "SHOW_NOTIFICATION") {
+    const { title, body, icon, badge, tag } = e.data;
+    
+    self.registration.showNotification(title, {
+      body,
+      icon: icon || "/icon-192.png",
+      badge: badge || "/icon-72.png",
+      tag: tag || "comedy-group",
+      vibrate: [200, 100, 200],
+      requireInteraction: true,
+      timestamp: Date.now()
+    });
+  }
+});
+
+// Background Sync
 self.addEventListener("sync", (e) => {
   if (e.tag === "sync-notifications") {
-    console.log("[Service Worker] Background sync for notifications");
+    console.log("[Service Worker] Syncing notifications...");
   }
 });

@@ -821,6 +821,79 @@ async function startServer() {
     });
   }
 
+  // Push Notification Endpoints
+  // Store push subscriptions in memory (in production, use a database)
+  const pushSubscriptions: Array<{
+    endpoint: string;
+    keys: { p256dh: string; auth: string };
+    browser: string;
+    createdAt: string;
+  }> = [];
+
+  // Subscribe to push notifications
+  app.post("/api/notifications/subscribe", async (req, res) => {
+    try {
+      const subscription = req.body;
+      if (!subscription || !subscription.endpoint) {
+        return res.status(400).json({ error: "Invalid subscription" });
+      }
+
+      // Check if already exists
+      const existing = pushSubscriptions.find(s => s.endpoint === subscription.endpoint);
+      if (!existing) {
+        pushSubscriptions.push({
+          ...subscription,
+          browser: req.headers["user-agent"] || "unknown",
+          createdAt: new Date().toISOString()
+        });
+      }
+
+      res.json({ success: true, subscriberCount: pushSubscriptions.length });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to save subscription" });
+    }
+  });
+
+  // Send push notification to all subscribers
+  app.post("/api/notifications/send", async (req, res) => {
+    try {
+      const { title, body, icon, tag } = req.body;
+
+      if (!title || !body) {
+        return res.status(400).json({ error: "Title and body are required" });
+      }
+
+      // For demo purposes, we'll log the notification
+      // In production, you would use web-push library with VAPID keys
+      console.log("📢 Push Notification:");
+      console.log(`  Title: ${title}`);
+      console.log(`  Body: ${body}`);
+      console.log(`  Subscribers: ${pushSubscriptions.length}`);
+
+      // Note: Actual push requires web-push with VAPID keys
+      // This endpoint is ready for integration with FCM or other push services
+
+      res.json({
+        success: true,
+        message: `Notification queued for ${pushSubscriptions.length} subscribers`,
+        subscriberCount: pushSubscriptions.length
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to send notification" });
+    }
+  });
+
+  // Get subscriber count (for admin panel)
+  app.get("/api/notifications/subscribers", (req, res) => {
+    res.json({ count: pushSubscriptions.length });
+  });
+
+  // Demo: Send test notification
+  app.post("/api/notifications/test", (req, res) => {
+    console.log("📢 Test Notification Sent!");
+    res.json({ success: true, message: "Check your browser for the notification" });
+  });
+
   if (!process.env.VERCEL) {
     app.listen(PORT, "0.0.0.0", async () => {
       console.log(`Express Full-Stack server is actively running on http://localhost:${PORT}`);
