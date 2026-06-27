@@ -10,4 +10,6 @@ if (!supabaseUrl || !supabaseKey) {
   console.warn("[Supabase] Warning: SUPABASE_URL and SUPABASE_KEY are not defined in the environment.");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = (supabaseUrl && supabaseKey)
+  ? createClient(supabaseUrl, supabaseKey)
+  : null as any;

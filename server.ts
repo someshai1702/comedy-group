@@ -29,6 +29,16 @@ function getGeminiClient(): GoogleGenAI | null {
 
 // Database Helpers
 async function readDatabase() {
+  if (!supabase) {
+    console.error("[Supabase] Error: Supabase client is not initialized.");
+    return {
+      families: [],
+      menu: { starters: [], mainCourse: [], roti: [], rice: [], dessert: [], drinks: [] },
+      events: [],
+      rsvps: [],
+      notifications: []
+    };
+  }
   try {
     const [
       { data: families },
@@ -77,6 +87,10 @@ async function readDatabase() {
 }
 
 async function writeDatabase(db: any) {
+  if (!supabase) {
+    console.error("[Supabase] Error: Supabase client is not initialized.");
+    throw new Error("Supabase client is not initialized. Please configure environment variables in Vercel.");
+  }
   try {
     // 1. Sync Families
     const { data: existingFamilies } = await supabase.from("families").select("id");
