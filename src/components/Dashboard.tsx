@@ -52,7 +52,7 @@ ${evt.notes ? `💬 *Notes:* ${evt.notes}\n` : ""}
 • ${confirmedFamilies}/${totalFamilies} families confirmed
 • Total Tickets Required: ${totalTickets} tickets
 
-${evt.deadline ? `⏳ *RSVP Deadline:* ${dlString}\n` : ""}
+${evt.deadline ? `⏳ *Vote Deadline:* ${dlString}\n` : ""}
 👇 *Submit your ticket booking here:*
 🔗 ${appLink}
 `;

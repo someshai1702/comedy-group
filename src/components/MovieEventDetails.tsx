@@ -87,7 +87,7 @@ ${eventRsvps.length > 0 && (
   }).join('\n')
 )}
 
-${event.deadline ? `\n⏳ *RSVP Deadline:* ${dlString}\n` : ""}
+${event.deadline ? `\n⏳ *Vote Deadline:* ${dlString}\n` : ""}
 👇 *Book your tickets here:*
 🔗 ${appLink}
 `;

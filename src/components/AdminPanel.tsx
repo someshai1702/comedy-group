@@ -714,7 +714,7 @@ ${evt.googleMapsUrl ? `🔗 *Google Maps:* ${evt.googleMapsUrl}\n` : ""}⏳ *Ord
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-500 font-bold block">RSVP Deadline (Optional)</label>
+              <label className="text-xs text-gray-500 font-bold block">Vote Deadline (Optional)</label>
               <input
                 type="datetime-local"
                 value={mvEvtDeadline}
