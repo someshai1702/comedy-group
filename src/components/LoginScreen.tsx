@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Family } from "../types";
-import { Lock, Users, AlertTriangle, HelpCircle } from "lucide-react";
+import { Lock, Users, AlertTriangle } from "lucide-react";
 
 interface LoginScreenProps {
   families: Family[];
@@ -360,39 +360,7 @@ export default function LoginScreen({ families, onLoginSuccess }: LoginScreenPro
           </>
         )}
 
-        {/* Footer info/PIN help */}
-        <div className="mt-8 pt-4 border-t border-gray-100 flex justify-between items-center text-xs text-gray-400 font-medium">
-          <button
-            onClick={() => {
-              setShowChangePinForm(true);
-              setError("");
-              setPin("");
-            }}
-            className="text-gray-500 hover:text-orange-500 transition-colors font-bold"
-          >
-            Change PIN?
-          </button>
-          <button
-            onClick={() => setShowHelp(!showHelp)}
-            className="flex items-center gap-1 text-gray-500 hover:text-orange-500 transition-colors font-bold"
-          >
-            <HelpCircle size={14} />
-            <span>Need PIN?</span>
-          </button>
-        </div>
 
-        {showHelp && (
-          <div className="mt-3 p-3.5 bg-gray-50 rounded-2xl border border-gray-100 text-[11px] text-gray-600 space-y-1.5 animate-slideDown">
-            <p className="font-bold text-gray-700">💡 Standard Demo PIN Credentials:</p>
-            <ul className="list-disc pl-4 space-y-1 font-medium">
-              <li>Sharma Family PIN: <span className="text-orange-600 font-mono font-bold">1111</span></li>
-              <li>Patel Family PIN: <span className="text-orange-600 font-mono font-bold">2222</span></li>
-              <li>Mehta Family PIN: <span className="text-orange-600 font-mono font-bold">3333</span></li>
-              <li>Joshi Family PIN: <span className="text-orange-600 font-mono font-bold">4444</span></li>
-              <li>Group Admin PIN: <span className="text-orange-600 font-mono font-bold">0000</span></li>
-            </ul>
-          </div>
-        )}
       </div>
     </div>
   );
