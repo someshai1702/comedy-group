@@ -174,7 +174,7 @@ export default function LoginScreen({ families, onLoginSuccess }: LoginScreenPro
                 className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm focus:border-orange-500 focus:outline-none font-bold"
               >
                 <option value="">-- Choose Your Family --</option>
-                {families.map((f) => (
+                {families.filter(f => f.id !== "admin").map((f) => (
                   <option key={f.id} value={f.id}>{f.name}</option>
                 ))}
               </select>
@@ -257,7 +257,7 @@ export default function LoginScreen({ families, onLoginSuccess }: LoginScreenPro
                   Select Your Family
                 </label>
                 <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                  {families.map((fam) => {
+                  {families.filter(f => f.id !== "admin").map((fam) => {
                     const isSelected = fam.id === selectedFamilyId;
                     return (
                       <button

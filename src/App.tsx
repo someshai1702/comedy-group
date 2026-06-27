@@ -34,6 +34,23 @@ export default function App() {
 
   // Load active session from LocalStorage (provides instant offline boot!)
   useEffect(() => {
+    // Check if accessing /master route for admin
+    const path = window.location.pathname;
+    if (path === "/master") {
+      const adminFamily: Family = {
+        id: "admin",
+        name: "System Admin",
+        adults: ["Admin"],
+        children: [],
+        pin: "0000"
+      };
+      setCurrentFamily(adminFamily);
+      localStorage.setItem("comedy_planner_family", JSON.stringify(adminFamily));
+      // Clean URL
+      window.history.replaceState({}, "", "/");
+      return;
+    }
+
     const savedFamily = localStorage.getItem("comedy_planner_family");
     if (savedFamily) {
       try {
