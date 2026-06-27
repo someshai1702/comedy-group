@@ -39,7 +39,8 @@ ${event.googleMapsUrl ? `🔗 *Google Maps:* ${event.googleMapsUrl}\n` : ""}⏳ 
 💬 *Notes:* ${event.notes || "Join us for great laughs and delicious food!"}
 
 👇 *Submit your RSVP & Food Order here:*
-🔗 ${appLink}
+🔗 ${appLink};
+
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
   };
 
