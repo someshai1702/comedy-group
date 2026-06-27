@@ -40,7 +40,6 @@ ${event.googleMapsUrl ? `🔗 *Google Maps:* ${event.googleMapsUrl}\n` : ""}⏳ 
 
 👇 *Submit your RSVP & Food Order here:*
 🔗 ${appLink};
-
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
   };
 
