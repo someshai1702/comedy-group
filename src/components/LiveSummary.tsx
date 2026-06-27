@@ -79,6 +79,9 @@ export default function LiveSummary({ event, families, rsvps, menu, onBack }: Li
 
   // 4. Create Beautiful text summary for WhatsApp sharing
   const generateTextSummary = (): string => {
+    const appLink = window.location.origin;
+    const imageLink = `${appLink}/comedy_group.png`;
+
     let text = `*🎭 Comedy Group Dinner Planning 🎭*\n`;
     text += `*Occasion:* ${event.name || "Comedy Group Dinner"}\n`;
     text += `*Date:* ${new Date(event.date).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}\n`;
@@ -121,6 +124,7 @@ export default function LiveSummary({ event, families, rsvps, menu, onBack }: Li
     }
 
     text += `\n_Generated from Comedy Group Planner Web App_ 📱`;
+    text += `\n📷 *Preview:* ${imageLink}`;
     return text;
   };
 

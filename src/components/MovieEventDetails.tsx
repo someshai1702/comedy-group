@@ -56,6 +56,7 @@ export default function MovieEventDetails({
     const hostName = families.find(f => f.id === event.hostFamilyId)?.name || "Comedy Group Host";
     const dlString = event.deadline ? new Date(event.deadline).toLocaleString() : "TBD";
     const appLink = window.location.origin;
+    const imageLink = `${appLink}/comedy_group.png`;
 
     // Calculate ticket counts
     const eventRsvps = rsvps.filter(r => r.eventId === event.id && r.attending === "Yes");
@@ -88,7 +89,8 @@ ${eventRsvps.length > 0 && (
 
 ${event.deadline ? `\n⏳ *RSVP Deadline:* ${dlString}\n` : ""}
 👇 *Book your tickets here:*
-🔗 ${appLink}`;
+🔗 ${appLink}
+📷 *Preview:* ${imageLink}`;
 
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
   };
