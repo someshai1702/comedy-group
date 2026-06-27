@@ -1,24 +1,18 @@
 // Firebase configuration
-// To set up push notifications:
-// 1. Go to https://console.firebase.google.com
-// 2. Create a new project or use existing one
-// 3. Add a Web app in Project Settings
-// 4. Copy the config values below
-// 5. Generate VAPID keys using: npx web-push generate-vKeys
+// Comedy Group Planner - comedy-group-project
 
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBbKwHnN6Em2K_16-4oY2xtgmBxml8R4Lo",
+  authDomain: "comedy-group-project.firebaseapp.com",
+  projectId: "comedy-group-project",
+  storageBucket: "comedy-group-project.firebasestorage.app",
+  messagingSenderId: "841868646390",
+  appId: "1:841868646390:web:cb41e7892ab8ddbc4759d7"
 };
 
-// VAPID keys - Required for web push
-// Run: npx web-push generate-vKeys
-export const VAPID_PUBLIC_KEY = "YOUR_VAPID_PUBLIC_KEY";
+// VAPID keys for web push notifications
+export const VAPID_PUBLIC_KEY = "BDiG4S4Sod4ysuEUoaxjCYVbvpPejQLyUKx_BpGB_82ptF4LbLKAm2_a8R_U1AyoCBfxLVRUakANcHCZ_3thYtA";
 
 export const isConfigured = (): boolean => {
-  return !firebaseConfig.apiKey.includes("YOUR_");
+  return !firebaseConfig.apiKey.includes("YOUR_") && !VAPID_PUBLIC_KEY.includes("YOUR_");
 };

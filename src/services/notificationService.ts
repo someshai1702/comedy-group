@@ -15,16 +15,6 @@ export interface NotificationPayload {
   url?: string;
 }
 
-export interface DeviceSubscription {
-  endpoint: string;
-  keys: {
-    p256dh: string;
-    auth: string;
-  };
-  browser: string;
-  createdAt: string;
-}
-
 // Register service worker and subscribe to push
 export async function initializePushNotifications(): Promise<boolean> {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
@@ -47,7 +37,6 @@ export async function initializePushNotifications(): Promise<boolean> {
     // Subscribe to push
     const subscription = await subscribeToPush(registration);
     if (subscription) {
-      // Save subscription to server
       await saveSubscription(subscription);
       console.log("Push subscription saved");
       return true;
@@ -64,11 +53,9 @@ async function subscribeToPush(registration: ServiceWorkerRegistration): Promise
   try {
     const existingSubscription = await registration.pushManager.getSubscription();
     if (existingSubscription) {
-      // Already subscribed
       return existingSubscription;
     }
 
-    // Check if VAPID key is configured
     if (VAPID_PUBLIC_KEY.includes("YOUR_")) {
       console.warn("VAPID key not configured. Using demo mode.");
       return null;
@@ -98,22 +85,23 @@ async function saveSubscription(subscription: PushSubscription): Promise<void> {
   }
 }
 
-// Send notification to all subscribers (called from admin panel)
-export async function sendNotificationToAll(payload: NotificationPayload): Promise<boolean> {
+// Send notification to all subscribers
+export async function sendNotificationToAll(payload: NotificationPayload): Promise<{ success: boolean; message: string }> {
   try {
     const response = await fetch(`${API_BASE}/notifications/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-    return response.ok;
+    const result = await response.json();
+    return { success: response.ok, message: result.message || "Notification sent" };
   } catch (error) {
     console.error("Send notification failed:", error);
-    return false;
+    return { success: false, message: "Failed to send notification" };
   }
 }
 
-// Show local notification (for demo/testing)
+// Show local notification
 export function showLocalNotification(title: string, body: string, options?: NotificationOptions): void {
   if (Notification.permission !== "granted") {
     console.warn("Notification permission not granted");
@@ -133,42 +121,30 @@ export function showLocalNotification(title: string, body: string, options?: Not
   });
 }
 
-// Event creation notification templates
+// Event notification templates
 export const NotificationTemplates = {
   newEvent: (eventName: string, host: string) => ({
     title: "🎉 New Event Created!",
     body: `${eventName} - Hosted by ${host}. Tap to RSVP now!`,
-    icon: "/public/comedy_group.png",
-    badge: "/public/comedy_group.png",
     tag: "new-event"
   }),
-
   eventReminder: (eventName: string, deadline: string) => ({
     title: "⏰ Event Reminder",
     body: `${eventName} - Vote before ${deadline}`,
-    icon: "/public/comedy_group.png",
-    badge: "/public/comedy_group.png",
     tag: "event-reminder"
   }),
-
   eventUpdate: (eventName: string) => ({
     title: "📢 Event Update",
     body: `${eventName} has been updated. Check the latest details!`,
-    icon: "/public/comedy_group.png",
-    badge: "/public/comedy_group.png",
     tag: "event-update"
   }),
-
   ticketUpdate: (eventName: string, totalTickets: number) => ({
     title: "🎟️ Ticket Update",
     body: `${eventName}: ${totalTickets} tickets confirmed`,
-    icon: "/public/comedy_group.png",
-    badge: "/public/comedy_group.png",
     tag: "ticket-update"
   })
 };
 
-// Helper function
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -180,7 +156,6 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-// Get notification permission status
 export function getNotificationStatus(): "granted" | "denied" | "default" {
   if (!("Notification" in window)) {
     return "denied";

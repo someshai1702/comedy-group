@@ -4,12 +4,20 @@ import fs from "fs/promises";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { supabase } from "./supabase.js";
+import webpush from "web-push";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 const DB_FILE = path.join(process.cwd(), "db.json");
+
+// VAPID keys for push notifications
+const VAPID_PUBLIC_KEY = "BDiG4S4Sod4ysuEUoaxjCYVbvpPejQLyUKx_BpGB_82ptF4LbLKAm2_a8R_U1AyoCBfxLVRUakANcHCZ_3thYtA";
+const VAPID_PRIVATE_KEY = "Kz9W65Z5-56fPyN25CgWMAFu3PGpPyBopGc5pxADqHw";
+const VAPID_SUBJECT = "mailto:admin@comedy-group.com";
+
+webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 // Parse JSON body
 app.use(express.json());
@@ -857,28 +865,65 @@ async function startServer() {
   // Send push notification to all subscribers
   app.post("/api/notifications/send", async (req, res) => {
     try {
-      const { title, body, icon, tag } = req.body;
+      const { title, body, icon, tag, url } = req.body;
 
       if (!title || !body) {
         return res.status(400).json({ error: "Title and body are required" });
       }
 
-      // For demo purposes, we'll log the notification
-      // In production, you would use web-push library with VAPID keys
-      console.log("📢 Push Notification:");
-      console.log(`  Title: ${title}`);
-      console.log(`  Body: ${body}`);
-      console.log(`  Subscribers: ${pushSubscriptions.length}`);
+      const notificationPayload = JSON.stringify({
+        title,
+        body,
+        icon: icon || "/public/comedy_group.png",
+        badge: "/public/comedy_group.png",
+        tag: tag || "comedy-group",
+        url: url || "/",
+        vibrate: [200, 100, 200]
+      });
 
-      // Note: Actual push requires web-push with VAPID keys
-      // This endpoint is ready for integration with FCM or other push services
+      const notificationOptions = {
+        TTL: 86400, // 24 hours
+        urgency: "normal"
+      };
+
+      let successCount = 0;
+      let failCount = 0;
+
+      // Send to all subscribers
+      const sendPromises = pushSubscriptions.map(async (subscription) => {
+        try {
+          await webpush.sendNotification(
+            { endpoint: subscription.endpoint, keys: subscription.keys },
+            notificationPayload,
+            notificationOptions
+          );
+          successCount++;
+        } catch (err: any) {
+          console.error("Push failed for subscriber:", err.message);
+          failCount++;
+          // Remove invalid subscriptions
+          if (err.statusCode === 404 || err.statusCode === 410) {
+            const idx = pushSubscriptions.findIndex(s => s.endpoint === subscription.endpoint);
+            if (idx !== -1) pushSubscriptions.splice(idx, 1);
+          }
+        }
+      });
+
+      await Promise.all(sendPromises);
+
+      console.log("📢 Push Notification Sent:");
+      console.log(`  Title: ${title}`);
+      console.log(`  Success: ${successCount}, Failed: ${failCount}`);
 
       res.json({
         success: true,
-        message: `Notification queued for ${pushSubscriptions.length} subscribers`,
+        message: `Notification sent to ${successCount} subscribers`,
+        successCount,
+        failCount,
         subscriberCount: pushSubscriptions.length
       });
     } catch (error) {
+      console.error("Send notification error:", error);
       res.status(500).json({ error: "Failed to send notification" });
     }
   });
