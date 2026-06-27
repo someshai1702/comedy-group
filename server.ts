@@ -4,7 +4,7 @@ import fs from "fs/promises";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { supabase } from "./supabase.js";
-import webpush from "web-push";
+import admin from "firebase-admin";
 
 dotenv.config();
 
@@ -12,12 +12,23 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 const DB_FILE = path.join(process.cwd(), "db.json");
 
-// VAPID keys for push notifications
-const VAPID_PUBLIC_KEY = "BDiG4S4Sod4ysuEUoaxjCYVbvpPejQLyUKx_BpGB_82ptF4LbLKAm2_a8R_U1AyoCBfxLVRUakANcHCZ_3thYtA";
-const VAPID_PRIVATE_KEY = "Kz9W65Z5-56fPyN25CgWMAFu3PGpPyBopGc5pxADqHw";
-const VAPID_SUBJECT = "mailto:admin@comedy-group.com";
-
-webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+// Firebase Admin SDK for Cloud Messaging
+let firebaseInitialized = false;
+try {
+  if (process.env.FIREBASE_PROJECT_ID) {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      }),
+    });
+    firebaseInitialized = true;
+    console.log("✅ Firebase Admin SDK initialized");
+  }
+} catch (err) {
+  console.warn("Firebase Admin SDK not configured:", err);
+}
 
 // Parse JSON body
 app.use(express.json());
@@ -871,53 +882,46 @@ async function startServer() {
         return res.status(400).json({ error: "Title and body are required" });
       }
 
-      const notificationPayload = JSON.stringify({
-        title,
-        body,
-        icon: icon || "/public/comedy_group.png",
-        badge: "/public/comedy_group.png",
-        tag: tag || "comedy-group",
-        url: url || "/",
-        vibrate: [200, 100, 200]
-      });
+      console.log("📢 Push Notification:");
+      console.log(`  Title: ${title}`);
+      console.log(`  Body: ${body}`);
+      console.log(`  Subscribers: ${pushSubscriptions.length}`);
 
-      const notificationOptions = {
-        TTL: 86400, // 24 hours
-        urgency: "normal"
-      };
-
+      // Send to all browser subscriptions using Firebase FCM
       let successCount = 0;
       let failCount = 0;
 
-      // Send to all subscribers
-      const sendPromises = pushSubscriptions.map(async (subscription) => {
+      if (firebaseInitialized && pushSubscriptions.length > 0) {
+        const messages = pushSubscriptions.map(sub => ({
+          notification: { title, body },
+          webpush: {
+            notification: {
+              icon: icon || "/public/comedy_group.png",
+              badge: "/public/comedy_group.png",
+              tag: tag || "comedy-group",
+              requireInteraction: true,
+            },
+            fcmOptions: { link: url || "/" },
+          },
+          token: sub.endpoint, // Using endpoint as token identifier
+        }));
+
         try {
-          await webpush.sendNotification(
-            { endpoint: subscription.endpoint, keys: subscription.keys },
-            notificationPayload,
-            notificationOptions
-          );
-          successCount++;
-        } catch (err: any) {
-          console.error("Push failed for subscriber:", err.message);
-          failCount++;
-          // Remove invalid subscriptions
-          if (err.statusCode === 404 || err.statusCode === 410) {
-            const idx = pushSubscriptions.findIndex(s => s.endpoint === subscription.endpoint);
-            if (idx !== -1) pushSubscriptions.splice(idx, 1);
-          }
+          const response = await admin.messaging().sendEach(messages.map(msg => ({
+            ...msg,
+            token: msg.token.split('?').pop() || msg.token, // Extract actual token from endpoint
+          })));
+          
+          successCount = response.successCount;
+          failCount = response.failureCount;
+        } catch (fcmError) {
+          console.error("FCM send error:", fcmError);
         }
-      });
-
-      await Promise.all(sendPromises);
-
-      console.log("📢 Push Notification Sent:");
-      console.log(`  Title: ${title}`);
-      console.log(`  Success: ${successCount}, Failed: ${failCount}`);
+      }
 
       res.json({
         success: true,
-        message: `Notification sent to ${successCount} subscribers`,
+        message: `Notification queued for ${pushSubscriptions.length} subscribers`,
         successCount,
         failCount,
         subscriberCount: pushSubscriptions.length
