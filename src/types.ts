@@ -4,7 +4,6 @@ export interface Family {
   adults: string[];
   children: string[];
   pin: string;
-  photoUrl: string;
 }
 
 export interface MenuItem {
