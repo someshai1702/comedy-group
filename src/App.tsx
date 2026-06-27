@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Family, Event, RSVP, Menu, DbState, MenuItem, GroupNotification } from "./types";
 import LoginScreen from "./components/LoginScreen";
+import AdminLogin from "./components/AdminLogin";
 import Dashboard from "./components/Dashboard";
 import EventDetails from "./components/EventDetails";
 import MovieEventDetails from "./components/MovieEventDetails";
@@ -13,6 +14,7 @@ import { LogOut, Home, BarChart2, ShieldAlert, ShoppingBag, Bell, Menu as Hambur
 export default function App() {
   // Authentication & Session
   const [currentFamily, setCurrentFamily] = useState<Family | null>(null);
+  const [isAdminRoute, setIsAdminRoute] = useState<boolean>(false);
 
   // Global State (replicated from backend server)
   const [dbState, setDbState] = useState<DbState>({
@@ -34,22 +36,15 @@ export default function App() {
 
   // Load active session from LocalStorage (provides instant offline boot!)
   useEffect(() => {
-    // Check if accessing /master route for admin
     const path = window.location.pathname;
+
+    // Check if accessing /master route - show admin PIN login
     if (path === "/master") {
-      const adminFamily: Family = {
-        id: "admin",
-        name: "System Admin",
-        adults: ["Admin"],
-        children: [],
-        pin: "0000"
-      };
-      setCurrentFamily(adminFamily);
-      localStorage.setItem("comedy_planner_family", JSON.stringify(adminFamily));
-      // Clean URL
-      window.history.replaceState({}, "", "/");
+      setIsAdminRoute(true);
       return;
     }
+
+    setIsAdminRoute(false);
 
     const savedFamily = localStorage.getItem("comedy_planner_family");
     if (savedFamily) {
@@ -254,6 +249,11 @@ export default function App() {
 
   // Render Login flow if no session found
   if (!currentFamily) {
+    if (isAdminRoute) {
+      return (
+        <AdminLogin onLoginSuccess={handleLoginSuccess} />
+      );
+    }
     return (
       <LoginScreen
         families={dbState.families}
