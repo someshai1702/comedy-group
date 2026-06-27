@@ -229,7 +229,7 @@ export default function LiveSummary({ event, families, rsvps, menu, onBack }: Li
             <h4 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider print:text-black">Family Status Log</h4>
 
             <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
-              {eventRsvps.map((rsvp) => {
+              {eventRsvps.filter(r => r.familyId !== "admin").map((rsvp) => {
                 const f = families.find((fam) => fam.id === rsvp.familyId);
                 if (!f) return null;
 
