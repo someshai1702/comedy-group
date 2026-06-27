@@ -30,7 +30,6 @@ export default function Dashboard({
     const hostName = families.find(f => f.id === evt.hostFamilyId)?.name || "Comedy Group Host";
     const dlString = evt.deadline ? new Date(evt.deadline).toLocaleString() : "TBD";
     const appLink = window.location.origin;
-    const imageLink = `${appLink}/comedy_group.png`;
 
     // For Movie events, include ticket count
     if (evt.type === "Movie") {
@@ -54,8 +53,7 @@ ${evt.notes ? `💬 *Notes:* ${evt.notes}\n` : ""}
 
 ${evt.deadline ? `⏳ *RSVP Deadline:* ${dlString}\n` : ""}
 👇 *Submit your ticket booking here:*
-🔗 ${appLink}
-📷 *Preview:* ${imageLink}`;
+🔗 ${appLink}`;
 
       return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
     }
@@ -82,8 +80,7 @@ ${evt.notes ? `💬 *Notes:* ${evt.notes}\n` : ""}
 • ⏳ Pending: ${pendingCount} families
 
 👇 *Submit your RSVP & Food Order here:*
-🔗 ${appLink}
-📷 *Preview:* ${imageLink}`;
+🔗 ${appLink}`;
 
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
   };

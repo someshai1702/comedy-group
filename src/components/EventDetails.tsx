@@ -26,7 +26,6 @@ export default function EventDetails({
     const hostName = families.find(f => f.id === event.hostFamilyId)?.name || "Comedy Group Host";
     const dlString = event.deadline ? new Date(event.deadline).toLocaleString() : "TBD";
     const appLink = window.location.origin;
-    const imageLink = `${appLink}/comedy_group.png`;
 
     const message = `🎭 *New Comedy Group Dinner scheduled!*
 🎉 *Occasion:* ${event.name} (${event.type})
@@ -39,8 +38,7 @@ ${event.googleMapsUrl ? `🔗 *Google Maps:* ${event.googleMapsUrl}\n` : ""}⏳ 
 💬 *Notes:* ${event.notes || "Join us for great laughs and delicious food!"}
 
 👇 *Submit your RSVP & Food Order here:*
-🔗 ${appLink}
-📷 *Preview:* ${imageLink}`;
+🔗 ${appLink}`;
 
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
   };
