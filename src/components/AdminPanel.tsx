@@ -287,7 +287,7 @@ export default function AdminPanel({
     const hostName = families.find(f => f.id === evt.hostFamilyId)?.name || "Comedy Group Host";
     const dlString = evt.deadline ? new Date(evt.deadline).toLocaleString() : "TBD";
     const appLink = window.location.origin;
-    const imageLink = `${appLink}/icon-512.png`;
+    
 
     const message = `🎭 *New Comedy Group Dinner scheduled!*
 🎉 *Occasion:* ${evt.name} (${evt.type})
@@ -301,7 +301,7 @@ ${evt.googleMapsUrl ? `🔗 *Google Maps:* ${evt.googleMapsUrl}\n` : ""}⏳ *Ord
 
 👇 *Submit your RSVP & Food Order here:*
 🔗 ${appLink}
-📷 *Preview:* ${imageLink}`;
+`;
 
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
   };
