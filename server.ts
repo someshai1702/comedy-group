@@ -4,7 +4,6 @@ import fs from "fs/promises";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { supabase } from "./supabase.js";
-import admin from "firebase-admin";
 
 dotenv.config();
 
@@ -12,22 +11,32 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 const DB_FILE = path.join(process.cwd(), "db.json");
 
-// Firebase Admin SDK for Cloud Messaging
-let firebaseInitialized = false;
-try {
-  if (process.env.FIREBASE_PROJECT_ID) {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      }),
-    });
-    firebaseInitialized = true;
-    console.log("✅ Firebase Admin SDK initialized");
+// Firebase Admin SDK - initialized lazily
+let firebaseAdmin: typeof import("firebase-admin") | null = null;
+let firebaseMessaging: any = null;
+
+async function initFirebase() {
+  if (firebaseAdmin) return;
+  
+  if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
+    try {
+      const admin = await import("firebase-admin");
+      firebaseAdmin = admin;
+      
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        }),
+      });
+      
+      firebaseMessaging = admin.messaging();
+      console.log("✅ Firebase Admin SDK initialized");
+    } catch (err) {
+      console.warn("Firebase Admin SDK not configured:", err);
+    }
   }
-} catch (err) {
-  console.warn("Firebase Admin SDK not configured:", err);
 }
 
 // Parse JSON body
@@ -891,31 +900,32 @@ async function startServer() {
       let successCount = 0;
       let failCount = 0;
 
-      if (firebaseInitialized && pushSubscriptions.length > 0) {
-        const messages = pushSubscriptions.map(sub => ({
-          notification: { title, body },
-          webpush: {
-            notification: {
-              icon: icon || "/public/comedy_group.png",
-              badge: "/public/comedy_group.png",
-              tag: tag || "comedy-group",
-              requireInteraction: true,
-            },
-            fcmOptions: { link: url || "/" },
-          },
-          token: sub.endpoint, // Using endpoint as token identifier
-        }));
+      if (pushSubscriptions.length > 0) {
+        // Initialize Firebase if needed
+        await initFirebase();
+        
+        if (firebaseMessaging) {
+          try {
+            const messages = pushSubscriptions.map(sub => ({
+              notification: { title, body },
+              webpush: {
+                notification: {
+                  icon: icon || "/public/comedy_group.png",
+                  badge: "/public/comedy_group.png",
+                  tag: tag || "comedy-group",
+                  requireInteraction: true,
+                },
+                fcmOptions: { link: url || "/" },
+              },
+              token: sub.endpoint.split('?').pop() || sub.endpoint,
+            }));
 
-        try {
-          const response = await admin.messaging().sendEach(messages.map(msg => ({
-            ...msg,
-            token: msg.token.split('?').pop() || msg.token, // Extract actual token from endpoint
-          })));
-          
-          successCount = response.successCount;
-          failCount = response.failureCount;
-        } catch (fcmError) {
-          console.error("FCM send error:", fcmError);
+            const response = await firebaseMessaging.sendEach(messages);
+            successCount = response.successCount;
+            failCount = response.failureCount;
+          } catch (fcmError) {
+            console.error("FCM send error:", fcmError);
+          }
         }
       }
 
