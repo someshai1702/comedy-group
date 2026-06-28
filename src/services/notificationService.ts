@@ -197,8 +197,46 @@ function showNotificationFromPayload(payload: any): void {
 
 // Show local notification
 export function showLocalNotification(title: string, body: string, options?: NotificationOptions): void {
-  if (Notification.permission !== "granted") {
-    console.warn("Notification permission not granted");
+  // Check if notifications are supported
+  if (!("Notification" in window)) {
+    alert("😕 Your browser doesn't support notifications.\n\nPlease use Chrome or Safari on mobile.");
+    return;
+  }
+
+  if (Notification.permission === "denied") {
+    alert("🔕 Notifications are blocked!\n\nPlease enable notifications in your browser settings for this site.");
+    return;
+  }
+
+  if (Notification.permission === "default") {
+    // Request permission first
+    Notification.requestPermission().then((permission) => {
+      if (permission === "granted") {
+        // Now show the notification
+        showNotificationDirectly(title, body, options);
+      } else {
+        alert("🔕 Notification permission denied.\n\nPlease allow notifications to receive alerts.");
+      }
+    });
+    return;
+  }
+
+  // Permission is granted, show notification
+  showNotificationDirectly(title, body, options);
+}
+
+function showNotificationDirectly(title: string, body: string, options?: NotificationOptions): void {
+  if (!navigator.serviceWorker) {
+    // Fallback: use standard Notification API
+    if (Notification.permission === "granted") {
+      new Notification(title, {
+        body,
+        icon: "/public/comedy_group.png",
+        badge: "/public/comedy_group.png",
+        tag: "comedy-group",
+        ...options
+      });
+    }
     return;
   }
 
@@ -212,6 +250,9 @@ export function showLocalNotification(title: string, body: string, options?: Not
       requireInteraction: true,
       ...options
     });
+  }).catch((error) => {
+    console.error("Error showing notification:", error);
+    alert("Failed to show notification. Please try again.");
   });
 }
 
