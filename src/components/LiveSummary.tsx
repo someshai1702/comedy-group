@@ -28,6 +28,11 @@ export default function LiveSummary({ event, families, rsvps, menu, onBack }: Li
   const totalAdults = attendingRsvps.reduce((acc, curr) => acc + curr.adultsAttendingCount, 0);
   const totalChildren = attendingRsvps.reduce((acc, curr) => acc + curr.childrenAttendingCount, 0);
 
+  // Calculate actual group totals from families data (exclude admin)
+  const groupFamilies = families.filter(f => f.id !== "admin");
+  const totalGroupAdults = groupFamilies.reduce((sum, f) => sum + (f.adults?.length || 0), 0);
+  const totalGroupChildren = groupFamilies.reduce((sum, f) => sum + (f.children?.length || 0), 0);
+
   // Find families with no RSVP logged at all
   const respondedFamilyIds = eventRsvps.map((r) => r.familyId);
   const pendingFamilies = families.filter((f) => f.id !== "admin" && !respondedFamilyIds.includes(f.id));
@@ -202,13 +207,13 @@ export default function LiveSummary({ event, families, rsvps, menu, onBack }: Li
             <div className="bg-white border border-gray-100 rounded-3xl p-4 flex flex-col justify-between shadow-sm print:border-black/10">
               <span className="text-gray-400 text-[10px] uppercase font-bold tracking-wider block">Adults Coming</span>
               <span className="text-3xl font-black text-orange-500 font-mono mt-1 print:text-black">{totalAdults}</span>
-              <span className="text-[10px] text-gray-400 mt-2 block font-semibold">Of 14 Group Adults</span>
+              <span className="text-[10px] text-gray-400 mt-2 block font-semibold">Of {totalGroupAdults} Group Adults</span>
             </div>
 
             <div className="bg-white border border-gray-100 rounded-3xl p-4 flex flex-col justify-between shadow-sm print:border-black/10">
               <span className="text-gray-400 text-[10px] uppercase font-bold tracking-wider block">Kids Coming</span>
               <span className="text-3xl font-black text-amber-500 font-mono mt-1 print:text-black">{totalChildren}</span>
-              <span className="text-[10px] text-gray-400 mt-2 block font-semibold">Of 14 Group Kids</span>
+              <span className="text-[10px] text-gray-400 mt-2 block font-semibold">Of {totalGroupChildren} Group Kids</span>
             </div>
 
             <div className="bg-white border border-gray-100 rounded-3xl p-4 flex flex-col justify-between shadow-sm print:border-black/10 col-span-2">
