@@ -319,6 +319,16 @@ app.post("/api/login", async (req, res) => {
   res.json({ success: true, family });
 });
 
+// Debug endpoint to check db.json contents
+app.get("/api/debug/db", async (req, res) => {
+  const localDb = await readDatabaseFromFile();
+  res.json({
+    dbFileExists: true,
+    dbFileEvents: localDb.events,
+    serverUsingEvents: localDb.events
+  });
+});
+
 // Add Family
 app.post("/api/families", async (req, res) => {
   const { name, adults, children, pin, photoUrl } = req.body;
