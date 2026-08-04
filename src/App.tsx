@@ -55,10 +55,11 @@ export default function App() {
   const fetchDbState = async () => {
     setSyncing(true);
     try {
-      // Fetch db and events in parallel
-      const [dbResponse, eventsResponse] = await Promise.all([
+      // Fetch db, events, and notifications in parallel
+      const [dbResponse, eventsResponse, notifResponse] = await Promise.all([
         fetch("/api/db"),
-        fetch("/api/events")
+        fetch("/api/events"),
+        fetch("/api/notifications")
       ]);
       
       if (!dbResponse.ok) throw new Error("Could not pull state");
@@ -76,6 +77,14 @@ export default function App() {
               data.events.unshift(evt);
             }
           }
+        }
+      }
+      
+      // Also fetch notifications
+      if (notifResponse.ok) {
+        const notifData = await notifResponse.json();
+        if (notifData.notifications) {
+          data.notifications = notifData.notifications;
         }
       }
       

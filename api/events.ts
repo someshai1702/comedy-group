@@ -181,6 +181,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     eventsCache.unshift(newEvent);
     cacheLoaded = true;
 
+    // Create notification for all families
+    try {
+      const hostName = hostFamilyId.includes("-") ? hostFamilyId : hostFamilyId;
+      await fetch(`${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"}/api/notifications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "event",
+          title: "New Event Created",
+          message: `${newEvent.type} "${newEvent.name}" has been created${newEvent.restaurant ? ` at ${newEvent.restaurant}` : ""} on ${newEvent.date}`,
+          targetFamilyId: "all",
+          eventId: newEvent.id,
+          fromFamilyId: hostFamilyId
+        })
+      });
+    } catch (notifErr) {
+      console.error("Failed to create notification:", notifErr);
+    }
+
     console.log("[Events] Created event:", newEvent.id, "Supabase:", savedToSupabase);
 
     return res.json({ 
