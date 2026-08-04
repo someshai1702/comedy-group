@@ -17,7 +17,6 @@ function rowToEvent(row: any): any {
     restaurant: row.restaurant || "",
     address: row.address || "",
     googleMapsUrl: row.google_maps_url || "",
-    deadline: row.deadline,
     notes: row.notes || "",
     isActive: row.is_active !== false
   };
@@ -77,8 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         type,
         host_family_id: familyId,
         date,
-        time,
-        is_active: true
+        time
       };
       
       // Only add optional fields if they have values
@@ -104,7 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (method === "PUT" && id) {
-    const { name, type, hostFamilyId, date, time, restaurant, address, googleMapsUrl, deadline, notes, isActive } = body;
+    const { name, type, hostFamilyId, date, time, restaurant, address, notes } = body;
 
     try {
       const updateData: any = {};
@@ -115,10 +113,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (time !== undefined) updateData.time = time;
       if (restaurant !== undefined) updateData.restaurant = restaurant;
       if (address !== undefined) updateData.address = address;
-      if (googleMapsUrl !== undefined) updateData.google_maps_url = googleMapsUrl;
-      if (deadline !== undefined) updateData.deadline = deadline;
       if (notes !== undefined) updateData.notes = notes;
-      if (isActive !== undefined) updateData.is_active = isActive;
 
       const { data, error } = await supabase
         .from("events")
