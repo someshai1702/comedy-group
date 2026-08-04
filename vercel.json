@@ -12,12 +12,9 @@
     }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/serverless.ts" }
-  ],
-  "rewrites": [
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/dist/index.html"
-    }
+    { "src": "/api/(.*)", "dest": "/api/serverless.ts" },
+    { "src": "/sw.js", "dest": "/dist/sw.js" },
+    { "src": "/manifest.json", "dest": "/dist/manifest.json" },
+    { "check": true, "src": "/(.*)", "dest": "/dist/index.html" }
   ]
 }
