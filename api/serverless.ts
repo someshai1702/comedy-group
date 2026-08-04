@@ -350,24 +350,6 @@ app.post("/reset-db", async (req, res) => {
   res.json({ success: true, db: cleanDb });
 });
 
-// Serve static files and SPA fallback
-// This should only be reached for non-API GET requests after the prefix is stripped
-app.use((req, res, next) => {
-  // Only serve SPA for GET requests that aren't API routes
-  if (req.method !== "GET") {
-    return next();
-  }
-  
-  const indexPath = path.join(process.cwd(), "dist", "index.html");
-  fs.readFile(indexPath, "utf-8")
-    .then(content => {
-      res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.send(content);
-    })
-    .catch(() => {
-      res.status(404).send("Not found");
-    });
-});
-
 // Export for Vercel serverless
+// SPA routing is handled by Vercel via vercel.json routes
 export default app;
