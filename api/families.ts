@@ -23,8 +23,10 @@ function rowToFamily(row: any): any {
   try {
     if (row.address) extra = JSON.parse(row.address);
   } catch {}
+  // Use simple ID like "sharma", "patel" not "sharma_family"
+  const namePart = row.name.split(" ")[0].toLowerCase();
   return {
-    id: row.name.toLowerCase().replace(/\s+/g, "_"),
+    id: namePart,
     name: row.name,
     adults: extra.adults || [],
     children: extra.children || [],

@@ -23,8 +23,10 @@ function rowToFamily(row: any): any {
   try {
     if (row.address) extra = JSON.parse(row.address);
   } catch {}
+  // Use simple ID like "sharma", "patel" not "sharma_family"
+  const namePart = row.name.split(" ")[0].toLowerCase();
   return {
-    id: row.name.toLowerCase().replace(/\s+/g, "_"),
+    id: namePart,
     name: row.name,
     adults: extra.adults || [],
     children: extra.children || [],
@@ -33,13 +35,15 @@ function rowToFamily(row: any): any {
   };
 }
 
-// Find family by name (since DB uses name, not id)
-async function findFamilyByName(name: string): Promise<any | null> {
+// Find family by simple ID
+async function findFamilyById(id: string): Promise<any | null> {
   try {
+    // First convert "sharma" to "Sharma Family" for query
+    const familyName = id.charAt(0).toUpperCase() + id.slice(1) + " Family";
     const { data, error } = await supabase
       .from("families")
       .select("id, name, photo_url, address")
-      .ilike("name", name);
+      .ilike("name", familyName);
     
     if (error || !data || data.length === 0) return null;
     return rowToFamily(data[0]);
@@ -50,7 +54,7 @@ async function findFamilyByName(name: string): Promise<any | null> {
 
 // Update family in Supabase
 async function updateFamilyInDb(id: string, updates: any): Promise<any | null> {
-  const familyName = id.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  const familyName = id.charAt(0).toUpperCase() + id.slice(1) + " Family";
   
   try {
     // First get the current row
@@ -114,7 +118,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // GET /api/families/:id
   if (req.method === "GET") {
     // Try Supabase first
-    const family = await findFamilyByName(id.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "));
+    const family = await findFamilyById(id);
     if (family) {
       return res.json({ success: true, family, source: "supabase" });
     }
@@ -158,8 +162,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { currentPin, newPin } = req.body;
     
     // Get current family
-    const familyName = id.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-    const family = await findFamilyByName(familyName) || DEFAULT_FAMILIES[id];
+    const family = await findFamilyById(id) || DEFAULT_FAMILIES[id];
     
     if (!family) {
       return res.status(404).json({ error: "Family not found" });
