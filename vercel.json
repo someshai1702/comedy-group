@@ -13,6 +13,9 @@
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/serverless.ts" },
-    { "src": "/(.*)", "dest": "/dist/$1" }
+    { "src": "/dist/(.*)", "dest": "/dist/$1" },
+    { "src": "/sw.js", "dest": "/dist/sw.js" },
+    { "src": "/manifest.json", "dest": "/dist/manifest.json" },
+    { "src": "/(.*)", "dest": "/dist/index.html" }
   ]
 }
