@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/serverless-v2.ts",
+      "src": "api/index.ts",
       "use": "@vercel/node",
       "config": { "maxLambdaSize": "10mb" }
     },
@@ -13,7 +13,7 @@
     }
   ],
   "functions": {
-    "api/serverless-v2.ts": {
+    "api/index.ts": {
       "maxDuration": 30
     }
   }
