@@ -1,26 +1,8 @@
-import express, { Request, Response } from "express";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import path from "path";
 import fs from "fs/promises";
-import { GoogleGenAI } from "@google/genai";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const app = express();
-app.use(express.json());
-
-// Strip /api prefix for Vercel serverless
-app.use((req, res, next) => {
-  if (req.path.startsWith("/api")) {
-    req.url = req.path.slice(4) || "/";
-    req.path = req.path.slice(4) || "/";
-  }
-  next();
-});
 
 const DB_FILE = path.join(process.cwd(), "db.json");
-
-// ==================== DATABASE FUNCTIONS ====================
 
 async function readDatabaseFromFile(): Promise<any> {
   try {
@@ -100,183 +82,40 @@ async function readDatabaseFromFile(): Promise<any> {
   }
 }
 
-async function readDatabase() {
-  return await readDatabaseFromFile();
-}
-
 async function writeDatabaseToFile(db: any): Promise<void> {
   await fs.writeFile(DB_FILE, JSON.stringify(db, null, 2), "utf-8");
 }
 
-async function writeDatabase(db: any) {
-  await writeDatabaseToFile(db);
-}
-
-// ==================== AI CLIENT ====================
-
-let aiClient: GoogleGenAI | null = null;
-function getGeminiClient(): GoogleGenAI | null {
-  if (!aiClient) {
-    const key = process.env.GEMINI_API_KEY;
-    if (key && key !== "MY_GEMINI_API_KEY") {
-      aiClient = new GoogleGenAI({ apiKey: key });
+// GET /db - Full database
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method === "GET") {
+    const db = await readDatabaseFromFile();
+    return res.json({ ...db, _version: "db_v1", _timestamp: Date.now() });
+  } else if (req.method === "POST") {
+    const { name, type, hostFamilyId, date, time, restaurant, address, googleMapsUrl, deadline, notes } = req.body;
+    if (!name || !type || !hostFamilyId || !date) {
+      return res.status(400).json({ error: "Name, type, hostFamilyId, and date are required" });
     }
+    const db = await readDatabaseFromFile();
+    const id = `evt_${Date.now()}`;
+    const newEvent = {
+      id, name, type, hostFamilyId, date,
+      time: time || "",
+      restaurant: restaurant || "",
+      address: address || "",
+      googleMapsUrl: googleMapsUrl || "",
+      deadline: deadline || "",
+      notes: notes || "",
+      isActive: true
+    };
+    db.events.push(newEvent);
+    try {
+      await writeDatabaseToFile(db);
+    } catch (err) {
+      // Ignore write errors
+    }
+    return res.json({ success: true, event: newEvent });
+  } else {
+    return res.status(405).json({ error: "Method not allowed" });
   }
-  return aiClient;
 }
-
-// ==================== ROUTES ====================
-
-// GET /api/db - Full database
-app.get("/db", async (req: Request, res: Response) => {
-  const db = await readDatabase();
-  res.json({ ...db, _version: "v5", _timestamp: Date.now() });
-});
-
-// GET /api/families - List all families
-app.get("/families", async (req: Request, res: Response) => {
-  const db = await readDatabase();
-  res.json({ success: true, families: db.families });
-});
-
-// POST /api/login - Login
-app.post("/login", async (req: Request, res: Response) => {
-  const { familyId, pin } = req.body;
-  if (!familyId || !pin) {
-    return res.status(400).json({ error: "Family ID and PIN are required" });
-  }
-  const db = await readDatabase();
-  const family = db.families.find((f: any) => f.id === familyId);
-  if (!family) {
-    return res.status(404).json({ error: "Family not found in the Comedy Group" });
-  }
-  if (family.pin !== pin) {
-    return res.status(401).json({ error: "Incorrect 4-digit PIN" });
-  }
-  res.json({ success: true, family });
-});
-
-// POST /api/families - Create family
-app.post("/families", async (req: Request, res: Response) => {
-  const { name, adults, children, pin, photoUrl } = req.body;
-  if (!name || !pin) {
-    return res.status(400).json({ error: "Family Name and PIN are required" });
-  }
-  const db = await readDatabase();
-  const id = name.toLowerCase().replace(/\s+/g, "_") + "_" + Date.now();
-  const newFamily = { id, name, adults: Array.isArray(adults) ? adults : [], children: Array.isArray(children) ? children : [], pin, photoUrl: photoUrl || "" };
-  db.families.push(newFamily);
-  await writeDatabase(db);
-  res.json({ success: true, family: newFamily });
-});
-
-// POST /api/events - Create event
-app.post("/events", async (req: Request, res: Response) => {
-  const { name, type, hostFamilyId, date, time, restaurant, address, googleMapsUrl, deadline, notes } = req.body;
-  if (!name || !type || !hostFamilyId || !date) {
-    return res.status(400).json({ error: "Name, type, hostFamilyId, and date are required" });
-  }
-  const db = await readDatabase();
-  const id = `evt_${Date.now()}`;
-  const newEvent = {
-    id, name, type, hostFamilyId, date,
-    time: time || "",
-    restaurant: restaurant || "",
-    address: address || "",
-    googleMapsUrl: googleMapsUrl || "",
-    deadline: deadline || "",
-    notes: notes || "",
-    isActive: true
-  };
-  db.events.push(newEvent);
-  await writeDatabase(db);
-  res.json({ success: true, event: newEvent });
-});
-
-// GET /api/events - List events
-app.get("/events", async (req: Request, res: Response) => {
-  const db = await readDatabase();
-  res.json({ success: true, events: db.events });
-});
-
-// POST /api/rsvps - Create RSVP
-app.post("/rsvps", async (req: Request, res: Response) => {
-  const { eventId, familyId, familyName, membersAttending, items, notes } = req.body;
-  if (!eventId || !familyId || !familyName) {
-    return res.status(400).json({ error: "eventId, familyId, and familyName are required" });
-  }
-  const db = await readDatabase();
-  const id = `rsvp_${Date.now()}`;
-  const newRsvp = {
-    id, eventId, familyId, familyName,
-    membersAttending: Array.isArray(membersAttending) ? membersAttending : [],
-    items: items || {},
-    notes: notes || "",
-    timestamp: new Date().toISOString()
-  };
-  db.rsvps.push(newRsvp);
-  await writeDatabase(db);
-  res.json({ success: true, rsvp: newRsvp });
-});
-
-// GET /api/rsvps - List RSVPs
-app.get("/rsvps", async (req: Request, res: Response) => {
-  const db = await readDatabase();
-  res.json({ success: true, rsvps: db.rsvps });
-});
-
-// POST /api/notification - Create notification
-app.post("/notification", async (req: Request, res: Response) => {
-  const { type, title, message, familyId, eventId } = req.body;
-  if (!type || !title || !message) {
-    return res.status(400).json({ error: "type, title, and message are required" });
-  }
-  const db = await readDatabase();
-  const id = `notif_${Date.now()}`;
-  const newNotification = {
-    id, type, title, message,
-    familyId: familyId || null,
-    eventId: eventId || null,
-    read: false,
-    timestamp: new Date().toISOString()
-  };
-  db.notifications.push(newNotification);
-  await writeDatabase(db);
-  res.json({ success: true, notification: newNotification });
-});
-
-// GET /api/menu - Get menu
-app.get("/menu", async (req: Request, res: Response) => {
-  const db = await readDatabase();
-  res.json({ success: true, menu: db.menu });
-});
-
-// POST /api/ai-menu - AI menu suggestion
-app.post("/ai-menu", async (req: Request, res: Response) => {
-  const { eventType, budget, dietaryRestrictions } = req.body;
-  const ai = getGeminiClient();
-  if (!ai) {
-    return res.status(503).json({ error: "AI service not configured" });
-  }
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: `Suggest a menu for a ${eventType || "family gathering"} with budget ${budget || "medium"}. Dietary restrictions: ${dietaryRestrictions || "none"}. Format as JSON with sections: starters, mainCourse, roti, rice, dessert, drinks. Include item names and approximate prices in INR.`,
-    });
-    res.json({ success: true, suggestion: response.text });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to generate menu suggestion" });
-  }
-});
-
-// POST /api/reset-db - Reset database
-app.post("/reset-db", async (req: Request, res: Response) => {
-  const db = await readDatabaseFromFile();
-  db.events = [];
-  db.rsvps = [];
-  db.notifications = [];
-  await writeDatabase(db);
-  res.json({ success: true, message: "Database reset successfully" });
-});
-
-export default app;
