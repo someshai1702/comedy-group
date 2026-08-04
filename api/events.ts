@@ -72,12 +72,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
+      // Calculate last_order_date (4 hours before event time)
+      const eventDateTime = new Date(date + "T" + time);
+      const lastOrderDate = new Date(eventDateTime.getTime() - 4 * 60 * 60 * 1000).toISOString();
+
       const newEvent: any = {
         name: name || "",
         type,
         host_family_id: familyId,
         date,
-        time
+        time,
+        last_order_date: lastOrderDate
       };
       
       // Only add optional fields if they have values
