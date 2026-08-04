@@ -52,6 +52,12 @@ async function readDatabase() {
   return await readDatabaseFromFile();
 }
 
+// Test endpoint for debugging POST requests
+app.post("/test", async (req, res) => {
+  console.log("POST /test called with body:", req.body);
+  res.json({ success: true, received: req.body });
+});
+
 async function writeDatabaseToFile(db: any): Promise<void> {
   await fs.writeFile(DB_FILE, JSON.stringify(db, null, 2), "utf-8");
 }
