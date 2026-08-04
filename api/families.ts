@@ -57,22 +57,28 @@ async function saveFamily(family: any) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const pathParts = req.url?.split("/").filter(Boolean) || [];
-  const familyId = pathParts[pathParts.length - 1];
+  // Parse URL to get path parameters
+  const url = req.url || "/";
+  const pathParts = url.split("/").filter(Boolean);
+  // URL is like /api/families or /api/families/sharma
+  const familyId = pathParts[2]; // /api/families/sharma -> ['', 'api', 'families', 'sharma']
 
+  // GET /api/families - List all
   if (req.method === "GET" && !familyId) {
     const families = await getFamilies();
     return res.json({ success: true, families });
   }
 
-  if (req.method === "GET" && familyId) {
+  // GET /api/families/:id - Get single
+  if (req.method === "GET" && familyId && !url.includes("/change-pin")) {
     const families = await getFamilies();
     const family = families.find((f: any) => f.id === familyId);
     if (!family) return res.status(404).json({ error: "Family not found" });
     return res.json({ success: true, family });
   }
 
-  if (req.method === "POST") {
+  // POST /api/families - Create
+  if (req.method === "POST" && !familyId) {
     const { name, adults, children, pin, photoUrl } = req.body;
     if (!name || !pin) return res.status(400).json({ error: "Name and PIN required" });
     const id = name.toLowerCase().replace(/\s+/g, "_") + "_" + Date.now();
@@ -81,6 +87,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json({ success: true, family: newFamily });
   }
 
+  // PUT /api/families/:id - Update
   if (req.method === "PUT" && familyId) {
     const { name, adults, children, pin, photoUrl } = req.body;
     const families = await getFamilies();
@@ -98,7 +105,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json({ success: true, family: updated });
   }
 
-  if (req.method === "PATCH" && req.url?.includes("/change-pin")) {
+  // PATCH /api/families/:id/change-pin
+  if (req.method === "PATCH" && familyId && url.includes("/change-pin")) {
     const { currentPin, newPin } = req.body;
     const families = await getFamilies();
     const family = families.find((f: any) => f.id === familyId);
