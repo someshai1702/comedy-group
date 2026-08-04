@@ -15,6 +15,9 @@
     { "src": "/api/(.*)", "dest": "/api/serverless.ts" }
   ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/dist/index.html" }
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/dist/index.html"
+    }
   ]
 }
