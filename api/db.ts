@@ -45,7 +45,20 @@ const DEFAULT_DB = {
       { id: "dr_soft_drink", name: "Soft Drink", price: 40 }
     ]
   },
-  events: [],
+  events: [
+    {
+      id: "demo-event-1",
+      name: "August Weekend Dinner",
+      type: "Weekend Dinner",
+      hostFamilyId: "sharma",
+      date: "2026-08-15",
+      time: "19:00",
+      restaurant: "Spice Garden",
+      address: "123 Main St",
+      notes: "Let's have a great time!",
+      isActive: true
+    }
+  ],
   rsvps: [],
   notifications: []
 };
