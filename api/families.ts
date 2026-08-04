@@ -28,12 +28,33 @@ async function readDatabaseFromFile(): Promise<any> {
   }
 }
 
+async function writeDatabaseToFile(db: any): Promise<void> {
+  await fs.writeFile(DB_FILE, JSON.stringify(db, null, 2), "utf-8");
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Only allow GET requests
   if (req.method === "GET") {
     const db = await readDatabaseFromFile();
-    res.json({ success: true, families: db.families });
+    return res.json({ success: true, families: db.families });
+  } else if (req.method === "POST") {
+    const { name, adults, children, pin, photoUrl } = req.body;
+    if (!name || !pin) {
+      return res.status(400).json({ error: "Family Name and PIN are required" });
+    }
+    const db = await readDatabaseFromFile();
+    const id = name.toLowerCase().replace(/\s+/g, "_") + "_" + Date.now();
+    const newFamily = {
+      id,
+      name,
+      adults: Array.isArray(adults) ? adults : [],
+      children: Array.isArray(children) ? children : [],
+      pin,
+      photoUrl: photoUrl || ""
+    };
+    db.families.push(newFamily);
+    await writeDatabaseToFile(db);
+    return res.json({ success: true, family: newFamily });
   } else {
-    res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({ error: "Method not allowed" });
   }
 }
