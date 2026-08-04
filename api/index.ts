@@ -454,4 +454,7 @@ app.post("/reset-db", async (req, res) => {
   res.json({ success: true, db: cleanDb });
 });
 
-export default app;
+// Export for Vercel serverless
+const handler = app;
+export { handler };
+export default handler;
