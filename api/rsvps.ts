@@ -5,6 +5,9 @@ const supabaseUrl = process.env.SUPABASE_URL || "https://tmdsgjheinmjxqthzmvm.su
 const supabaseKey = process.env.SUPABASE_KEY || "sb_publishable_yjiwdDGSPLJOO27mhdjU-g_XR-ir5Bg";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Demo events that are always valid for RSVPs
+const DEMO_EVENT_IDS = ["demo-event-1", "demo-event-2"];
+
 // POST /api/rsvps - Submit or update RSVP
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -19,17 +22,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Check if event exists and is active
-    const { data: event, error: eventError } = await supabase
-      .from("events")
-      .select("id, is_active")
-      .eq("id", eventId)
-      .single();
+    let eventExists = DEMO_EVENT_IDS.includes(eventId);
+    let isActive = true;
 
-    if (eventError || !event) {
-      return res.status(404).json({ error: "Event not found" });
+    if (!eventExists) {
+      const { data: event, error: eventError } = await supabase
+        .from("events")
+        .select("id, is_active")
+        .eq("id", eventId)
+        .single();
+
+      if (eventError || !event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      isActive = event.is_active !== false;
     }
 
-    if (!event.is_active) {
+    if (!isActive) {
       return res.status(403).json({ error: "This event is currently locked by the captain. No orders or changes are accepted." });
     }
 
