@@ -23,8 +23,8 @@ function rowToFamily(row: any): any {
   try {
     if (row.address) extra = JSON.parse(row.address);
   } catch {}
-  // Use simple ID like "sharma", "patel" not "sharma_family"
-  const namePart = row.name.split(" ")[0].toLowerCase();
+  // Use simple ID like "sharma", "patel", "mangesh" not "sharma_family"
+  const namePart = row.name.split(" ")[0].toLowerCase().replace(/[^a-z]/g, "");
   return {
     id: namePart,
     name: row.name,
@@ -45,22 +45,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: "Family ID and PIN required" });
   }
 
-  // Try to find in Supabase first
-  const familyName = familyId.charAt(0).toUpperCase() + familyId.slice(1) + " Family";
-  
+  // Search Supabase for all families and match by derived ID
   try {
     const { data, error } = await supabase
       .from("families")
-      .select("id, name, photo_url, address")
-      .ilike("name", familyName)
-      .single();
+      .select("id, name, photo_url, address");
     
     if (!error && data) {
-      const family = rowToFamily(data);
-      if (family.pin === pin) {
-        return res.json({ success: true, family, source: "supabase" });
-      } else {
-        return res.status(401).json({ error: "Incorrect PIN" });
+      const families = data.map(rowToFamily);
+      const family = families.find((f: any) => f.id === familyId);
+      if (family) {
+        if (family.pin === pin) {
+          return res.json({ success: true, family, source: "supabase" });
+        } else {
+          return res.status(401).json({ error: "Incorrect PIN" });
+        }
       }
     }
   } catch (err) {
