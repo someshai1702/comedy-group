@@ -45,6 +45,37 @@ async function readDatabaseFromFile(): Promise<any> {
   }
 }
 
+// Transform Supabase family row to app format
+function transformFamily(row: any): any {
+  let extra: any = {};
+  try {
+    if (row.address) extra = JSON.parse(row.address);
+  } catch {}
+  // Use simple ID like "sharma" not "sharma_family"
+  const namePart = row.name ? row.name.split(" ")[0].toLowerCase() : "";
+  return {
+    id: namePart,
+    name: row.name || "",
+    adults: extra.adults || [],
+    children: extra.children || [],
+    pin: extra.pin || "0000",
+    photoUrl: row.photo_url || extra.photoUrl || ""
+  };
+}
+
+// Transform app family format to Supabase format
+function familyToSupabase(f: any): any {
+  return {
+    name: f.name,
+    address: JSON.stringify({
+      adults: f.adults || [],
+      children: f.children || [],
+      pin: f.pin || "0000"
+    }),
+    photo_url: f.photoUrl || ""
+  };
+}
+
 async function readDatabase() {
   // Use local db.json file as primary source (works without Supabase)
   if (!supabase || !supabaseUrl || !supabaseKey) {
@@ -66,6 +97,9 @@ async function readDatabase() {
       supabase.from("notifications").select("*").order("createdAt", { ascending: false })
     ]);
 
+    // Transform family data from Supabase format to app format
+    const transformedFamilies = families ? families.map(transformFamily) : [];
+
     // Reconstruct menu structure
     const menu: any = { starters: [], mainCourse: [], roti: [], rice: [], dessert: [], drinks: [] };
     if (menuItems) {
@@ -80,7 +114,7 @@ async function readDatabase() {
     }
 
     return {
-      families: families || [],
+      families: transformedFamilies,
       menu,
       events: events || [],
       rsvps: rsvps || [],
@@ -117,24 +151,19 @@ async function writeDatabase(db: any) {
   }
   try {
     // 1. Sync Families
-    const { data: existingFamilies } = await supabase.from("families").select("id");
+    const { data: existingFamilies } = await supabase.from("families").select("name");
     if (existingFamilies) {
-      const dbIds = db.families.map((f: any) => f.id);
-      const toDelete = existingFamilies.map((f: any) => f.id).filter(id => !dbIds.includes(id));
+      const dbNames = db.families.map((f: any) => f.name);
+      const toDelete = existingFamilies.map((f: any) => f.name).filter(name => !dbNames.includes(name));
       if (toDelete.length > 0) {
-        await supabase.from("families").delete().in("id", toDelete);
+        for (const name of toDelete) {
+          await supabase.from("families").delete().ilike("name", name);
+        }
       }
     }
     if (db.families.length > 0) {
       const { error } = await supabase.from("families").upsert(
-        db.families.map((f: any) => ({
-          id: f.id,
-          name: f.name,
-          adults: f.adults,
-          children: f.children,
-          pin: f.pin,
-          photoUrl: f.photoUrl
-        }))
+        db.families.map((f: any) => familyToSupabase(f))
       );
       if (error) throw error;
     }
