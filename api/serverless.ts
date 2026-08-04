@@ -462,6 +462,18 @@ app.post("/reset-db", async (req, res) => {
   res.json({ success: true, db: cleanDb });
 });
 
+// Serve static files and SPA fallback
+app.get("*", async (req, res) => {
+  const indexPath = path.join(process.cwd(), "dist", "index.html");
+  try {
+    const content = await fs.readFile(indexPath, "utf-8");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(content);
+  } catch (error) {
+    res.status(404).send("Not found");
+  }
+});
+
 // Export for Vercel serverless
 export default app;
 export const config = {
