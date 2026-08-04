@@ -222,6 +222,7 @@ app.get("/db", async (req, res) => {
 
 // POST /api/login
 app.post("/login", async (req, res) => {
+  console.log("POST /login called");
   const { familyId, pin } = req.body;
   if (!familyId || !pin) {
     return res.status(400).json({ error: "Family ID and PIN are required" });
@@ -239,15 +240,20 @@ app.post("/login", async (req, res) => {
 
 // POST /api/families
 app.post("/families", async (req, res) => {
+  console.log("POST /families called");
   const { name, adults, children, pin, photoUrl } = req.body;
   if (!name || !pin) {
     return res.status(400).json({ error: "Family Name and PIN are required" });
   }
+  console.log("Reading database...");
   const db = await readDatabase();
+  console.log("Database read complete");
   const id = name.toLowerCase().replace(/\s+/g, "_") + "_" + Date.now();
   const newFamily = { id, name, adults: Array.isArray(adults) ? adults : [], children: Array.isArray(children) ? children : [], pin, photoUrl: photoUrl || "" };
   db.families.push(newFamily);
+  console.log("Writing database...");
   await writeDatabase(db);
+  console.log("Database write complete");
   res.json({ success: true, family: newFamily });
 });
 
