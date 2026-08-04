@@ -73,6 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const newEvent: any = {
+        name: name || "",
         type,
         host_family_id: familyId,
         date,
@@ -80,7 +81,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       };
       
       // Only add optional fields if they have values
-      if (name) newEvent.name = name;
       if (restaurant) newEvent.restaurant = restaurant;
       if (address) newEvent.address = address;
       if (notes) newEvent.notes = notes;
