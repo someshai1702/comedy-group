@@ -1,14 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import path from "path";
-import fs from "fs/promises";
 import { createClient } from "@supabase/supabase-js";
 
-const DB_FILE = path.join(process.cwd(), "db.json");
+const supabaseUrl = process.env.SUPABASE_URL || "https://tmdsgjheinmjxqthzmvm.supabase.co";
+const supabaseKey = process.env.SUPABASE_KEY || "sb_publishable_yjiwdDGSPLJOO27mhdjU-g_XR-ir5Bg";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-const supabaseUrl = process.env.SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_KEY || "";
-const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
-
+// Default families data
 const DEFAULT_FAMILIES = [
   { id: "sharma", name: "Sharma Family", adults: ["Rahul", "Priya"], children: ["Kabir", "Meera"], pin: "1111", photoUrl: "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&q=80&w=200" },
   { id: "patel", name: "Patel Family", adults: ["Amit", "Sneha"], children: ["Aarav", "Diya"], pin: "2222", photoUrl: "https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&q=80&w=200" },
@@ -20,58 +17,48 @@ const DEFAULT_FAMILIES = [
   { id: "admin", name: "Group Admin", adults: ["Captain Admin"], children: [], pin: "0000", photoUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200" }
 ];
 
-async function getFamilies() {
-  if (supabase) {
-    const { data } = await supabase.from("families").select("*");
-    if (data && data.length > 0) return data;
-  }
+// Convert DB row to family object
+function rowToFamily(row: any): any {
+  let extra = {};
   try {
-    const data = await fs.readFile(DB_FILE, "utf-8");
-    const db = JSON.parse(data);
-    return db.families || DEFAULT_FAMILIES;
-  } catch {
-    return DEFAULT_FAMILIES;
-  }
-}
-
-async function saveFamily(family: any) {
-  if (supabase) {
-    const { data } = await supabase.from("families").upsert(family).select().single();
-    if (data) return data;
-  }
-  try {
-    let db = { families: [] };
-    try {
-      const data = await fs.readFile(DB_FILE, "utf-8");
-      db = JSON.parse(data);
-    } catch {}
-    const idx = db.families.findIndex((f: any) => f.id === family.id);
-    if (idx >= 0) {
-      db.families[idx] = family;
-    } else {
-      db.families.push(family);
-    }
-    await fs.writeFile(DB_FILE, JSON.stringify(db, null, 2));
+    if (row.address) extra = JSON.parse(row.address);
   } catch {}
-  return family;
+  return {
+    id: row.name.toLowerCase().replace(/\s+/g, "_"),
+    name: row.name,
+    adults: extra.adults || [],
+    children: extra.children || [],
+    pin: extra.pin || "0000",
+    photoUrl: row.photo_url || extra.photoUrl || ""
+  };
 }
 
+// GET /api/families - List all
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // GET /api/families - List all
-  if (req.method === "GET") {
-    const families = await getFamilies();
-    return res.json({ success: true, families });
+  if (req.method !== "GET") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // POST /api/families - Create
-  if (req.method === "POST") {
-    const { name, adults, children, pin, photoUrl } = req.body;
-    if (!name || !pin) return res.status(400).json({ error: "Name and PIN required" });
-    const id = name.toLowerCase().replace(/\s+/g, "_") + "_" + Date.now();
-    const newFamily = { id, name, adults: adults || [], children: children || [], pin, photoUrl: photoUrl || "" };
-    await saveFamily(newFamily);
-    return res.json({ success: true, family: newFamily });
-  }
+  try {
+    const { data, error } = await supabase
+      .from("families")
+      .select("id, name, photo_url, address")
+      .limit(50);
 
-  return res.status(405).json({ error: "Method not allowed" });
+    if (error) {
+      console.error("Supabase error:", error);
+      // Return defaults if Supabase fails
+      return res.json({ success: true, families: DEFAULT_FAMILIES, source: "default" });
+    }
+
+    if (!data || data.length === 0) {
+      return res.json({ success: true, families: DEFAULT_FAMILIES, source: "default" });
+    }
+
+    const families = data.map(rowToFamily);
+    return res.json({ success: true, families, source: "supabase" });
+  } catch (err) {
+    console.error("Error:", err);
+    return res.json({ success: true, families: DEFAULT_FAMILIES, source: "default" });
+  }
 }

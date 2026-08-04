@@ -1,13 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import path from "path";
-import fs from "fs/promises";
 import { createClient } from "@supabase/supabase-js";
 
-const DB_FILE = path.join(process.cwd(), "db.json");
-
-const supabaseUrl = process.env.SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_KEY || "";
-const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
+const supabaseUrl = process.env.SUPABASE_URL || "https://tmdsgjheinmjxqthzmvm.supabase.co";
+const supabaseKey = process.env.SUPABASE_KEY || "sb_publishable_yjiwdDGSPLJOO27mhdjU-g_XR-ir5Bg";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const DEFAULT_DB = {
   families: [
@@ -54,39 +50,36 @@ const DEFAULT_DB = {
   notifications: []
 };
 
-async function getFullDb() {
-  if (supabase) {
-    const [families, events, rsvps, notifications] = await Promise.all([
-      supabase.from("families").select("*"),
-      supabase.from("events").select("*"),
-      supabase.from("rsvps").select("*"),
-      supabase.from("notifications").select("*")
-    ]);
-    
-    const menuData = await supabase.from("menu").select("*").limit(1);
-    
-    return {
-      families: families.data || [],
-      menu: menuData.data?.[0] || DEFAULT_DB.menu,
-      events: events.data || [],
-      rsvps: rsvps.data || [],
-      notifications: notifications.data || []
-    };
-  }
-  
-  try {
-    const data = await fs.readFile(DB_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return DEFAULT_DB;
-  }
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method === "GET") {
-    const db = await getFullDb();
-    return res.json({ ...db, _version: "db_v1" });
+  if (req.method !== "GET") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
-  
-  return res.status(405).json({ error: "Method not allowed" });
+
+  try {
+    const { data, error } = await supabase
+      .from("families")
+      .select("id, name, photo_url, address");
+
+    if (!error && data && data.length > 0) {
+      const families = data.map((row: any) => {
+        let extra: any = {};
+        try {
+          if (row.address) extra = JSON.parse(row.address);
+        } catch {}
+        return {
+          id: row.name.toLowerCase().replace(/\s+/g, "_"),
+          name: row.name,
+          adults: extra.adults || [],
+          children: extra.children || [],
+          pin: extra.pin || "0000",
+          photoUrl: row.photo_url || extra.photoUrl || ""
+        };
+      });
+      return res.json({ ...DEFAULT_DB, families, _version: "db_v1", _source: "supabase" });
+    }
+  } catch (err) {
+    console.error("Supabase error:", err);
+  }
+
+  return res.json({ ...DEFAULT_DB, _version: "db_v1", _source: "default" });
 }
