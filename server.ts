@@ -118,10 +118,24 @@ async function readDatabase() {
       }
     }
 
+    // Use events from local db.json, or fallback to default demo event
+    const events = localDb.events?.length > 0 ? localDb.events : [{
+      id: "demo-event-1",
+      name: "August Weekend Dinner",
+      type: "Weekend Dinner",
+      hostFamilyId: "sharma",
+      date: "2026-08-15",
+      time: "19:00",
+      restaurant: "Spice Garden",
+      address: "123 Main St",
+      notes: "Let's have a great time!",
+      isActive: true
+    }];
+
     return {
       families: transformedFamilies,
       menu,
-      events: localDb.events, // Use events from local db.json
+      events,
       rsvps: rsvps || [],
       notifications: notifications || []
     };
