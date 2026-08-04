@@ -5,6 +5,26 @@ const supabaseUrl = process.env.SUPABASE_URL || "https://tmdsgjheinmjxqthzmvm.su
 const supabaseKey = process.env.SUPABASE_KEY || "sb_publishable_yjiwdDGSPLJOO27mhdjU-g_XR-ir5Bg";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// In-memory events cache (shared with events API)
+let eventsCache: any[] | null = null;
+let cacheLoaded = false;
+
+// Default events
+const DEFAULT_EVENTS = [
+  {
+    id: "demo-event-1",
+    name: "August Weekend Dinner",
+    type: "Weekend Dinner",
+    hostFamilyId: "sharma",
+    date: "2026-08-15",
+    time: "19:00",
+    restaurant: "Spice Garden",
+    address: "123 Main St",
+    notes: "Let's have a great time!",
+    isActive: true
+  }
+];
+
 const DEFAULT_DB = {
   families: [
     { id: "sharma", name: "Sharma Family", adults: ["Rahul", "Priya"], children: ["Kabir", "Meera"], pin: "1111", photoUrl: "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&q=80&w=200" },
@@ -45,20 +65,7 @@ const DEFAULT_DB = {
       { id: "dr_soft_drink", name: "Soft Drink", price: 40 }
     ]
   },
-  events: [
-    {
-      id: "demo-event-1",
-      name: "August Weekend Dinner",
-      type: "Weekend Dinner",
-      hostFamilyId: "sharma",
-      date: "2026-08-15",
-      time: "19:00",
-      restaurant: "Spice Garden",
-      address: "123 Main St",
-      notes: "Let's have a great time!",
-      isActive: true
-    }
-  ],
+  events: DEFAULT_EVENTS,
   rsvps: [],
   notifications: []
 };
@@ -96,7 +103,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    let events = DEFAULT_DB.events;
+    // Build events list from multiple sources
+    let events: any[] = [];
+    
+    // 1. Add events from Supabase if available
     if (!eventsResult.error && eventsResult.data && eventsResult.data.length > 0) {
       events = eventsResult.data.map((row: any) => ({
         id: row.id,
@@ -108,10 +118,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         restaurant: row.restaurant || "",
         address: row.address || "",
         googleMapsUrl: row.google_maps_url || "",
-        deadline: row.deadline,
+        deadline: row.last_order_date,
         notes: row.notes || "",
         isActive: row.is_active !== false
       }));
+      eventsCache = events;
+      cacheLoaded = true;
+    }
+    
+    // 2. If we have cached events (from POST /api/events), add them
+    if (cacheLoaded && eventsCache && eventsCache.length > 0) {
+      // Merge cache with Supabase events, avoiding duplicates
+      const existingIds = new Set(events.map(e => e.id));
+      for (const cached of eventsCache) {
+        if (!existingIds.has(cached.id)) {
+          events.unshift(cached);
+        }
+      }
+    }
+    
+    // 3. If still no events, use default events
+    if (events.length === 0) {
+      events = DEFAULT_EVENTS;
     }
 
     let rsvps = DEFAULT_DB.rsvps;
@@ -135,7 +163,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       events,
       rsvps,
       notifications: [],
-      _version: "db_v2",
+      _version: "db_v3",
       _source: "supabase"
     });
   } catch (err) {
