@@ -32,7 +32,9 @@ function getGeminiClient(): GoogleGenAI | null {
 async function readDatabaseFromFile(): Promise<any> {
   try {
     const data = await fs.readFile(DB_FILE, "utf-8");
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    console.log("[Database] Read db.json, events:", parsed.events?.length || 0);
+    return parsed;
   } catch (error) {
     console.error("Error reading local db.json file:", error);
     return {
