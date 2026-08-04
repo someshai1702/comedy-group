@@ -8,17 +8,7 @@
     }
   ],
   "routes": [
-    { "src": "/api/db", "dest": "/api/server.ts" },
-    { "src": "/api/login", "dest": "/api/server.ts" },
-    { "src": "/api/families", "dest": "/api/server.ts" },
-    { "src": "/api/families/(.*)", "dest": "/api/server.ts" },
-    { "src": "/api/events", "dest": "/api/server.ts" },
-    { "src": "/api/events/(.*)", "dest": "/api/server.ts" },
-    { "src": "/api/rsvps", "dest": "/api/server.ts" },
-    { "src": "/api/menu", "dest": "/api/server.ts" },
-    { "src": "/api/notifications", "dest": "/api/server.ts" },
-    { "src": "/api/generate-menu-suggestion", "dest": "/api/server.ts" },
-    { "src": "/api/reset-db", "dest": "/api/server.ts" },
+    { "src": "/api/(.*)", "dest": "/api/index.ts" },
     { "src": "/((?!api/).*)", "dest": "/index.html" }
   ]
 }
