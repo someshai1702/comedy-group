@@ -11,6 +11,19 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 let eventsCache: any[] | null = null;
 let cacheLoaded = false;
 
+// Mapping of short family IDs to UUIDs (from Supabase)
+const FAMILY_ID_MAP: Record<string, string> = {
+  "sharma": "54d7240d-09d2-495e-8ae5-bb0f00751668",
+  "patel": "2e8e1bc8-0cdc-483b-8057-996659382b93",
+  "joshi": "e0618efa-7f1b-4a48-be38-650139fd730d",
+  "kapoor": "862b7940-e238-4211-9bc8-94cfbc4c6cec",
+  "malhotra": "537da851-dedc-426f-b20a-9f454253cce8",
+  "shah": "37458b23-234e-486a-89c1-fca8a8dd9cd8",
+  "admin": "ee5a209b-0d3e-4a96-81ee-1b232d582983",
+  "mehta": "54d7240d-09d2-495e-8ae5-bb0f00751668", // Default to Sharma if not found
+  "mangesh": "a62fa2c5-71e2-48eb-8151-90ccc48a693e"
+};
+
 // Default events
 const DEFAULT_EVENTS = [
   {
@@ -32,13 +45,31 @@ function getDefaultEvents(): any[] {
   return DEFAULT_EVENTS;
 }
 
+// Get UUID for a family ID (short ID or UUID)
+function getFamilyUUID(shortId: string): string {
+  // If it's already a UUID, return it
+  if (shortId.includes("-") && shortId.length === 36) {
+    return shortId;
+  }
+  // Look up in our map
+  return FAMILY_ID_MAP[shortId.toLowerCase()] || shortId;
+}
+
+// Reverse mapping: UUID to short ID
+const UUID_TO_FAMILY_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(FAMILY_ID_MAP).map(([k, v]) => [v, k])
+);
+
 // Convert DB row to event object
 function rowToEvent(row: any): any {
+  // Convert UUID back to short family ID for display
+  const hostFamilyId = UUID_TO_FAMILY_MAP[row.host_family_id] || row.host_family_id;
+  
   return {
     id: row.id,
     name: row.name || "",
     type: row.type,
-    hostFamilyId: row.host_family_id,
+    hostFamilyId: hostFamilyId,
     date: row.date,
     time: row.time,
     restaurant: row.restaurant || "",
@@ -55,13 +86,13 @@ function eventToRow(event: any): any {
   return {
     name: event.name || "",
     type: event.type,
-    host_family_id: event.hostFamilyId,
+    host_family_id: event.hostFamilyId, // Using short IDs like "sharma"
     date: event.date,
     time: event.time,
-    last_order_date: event.deadline,
-    restaurant: event.restaurant || "",
-    address: event.address || "",
-    notes: event.notes || "",
+    last_order_date: event.deadline || null,
+    restaurant: event.restaurant || null,
+    address: event.address || null,
+    notes: event.notes || null,
     is_active: event.isActive !== false
   };
 }
@@ -130,34 +161,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Try to save to Supabase
     let savedToSupabase = false;
     try {
-      // Look up family UUID from simple ID
-      let familyId = hostFamilyId;
-      if (!hostFamilyId.includes("-") || hostFamilyId.length !== 36) {
-        const { data: families } = await supabase
-          .from("families")
-          .select("id, name");
-
-        if (families) {
-          const found = families.find((f: any) => {
-            const derivedId = f.name.split(" ")[0].toLowerCase().replace(/[^a-z]/g, "");
-            return derivedId === hostFamilyId.toLowerCase();
-          });
-          if (found) {
-            familyId = found.id;
-          }
-        }
-      }
+      // Get the UUID for the host family
+      const familyUUID = getFamilyUUID(hostFamilyId);
+      
+      console.log("[Events] Saving event with host_family_id:", familyUUID, "(from:", hostFamilyId, ")");
 
       const eventRow = {
         name: newEvent.name,
         type: newEvent.type,
-        host_family_id: familyId,
+        host_family_id: familyUUID,
         date: newEvent.date,
         time: newEvent.time,
-        last_order_date: newEvent.deadline,
-        restaurant: newEvent.restaurant,
-        address: newEvent.address,
-        notes: newEvent.notes
+        last_order_date: newEvent.deadline || null,
+        restaurant: newEvent.restaurant || null,
+        address: newEvent.address || null,
+        notes: newEvent.notes || null
       };
 
       const { data, error } = await supabase
@@ -169,9 +187,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!error && data) {
         newEvent.id = data.id;
         savedToSupabase = true;
+        console.log("[Events] Successfully saved to Supabase:", data.id);
+      } else if (error) {
+        console.error("[Events] Supabase insert error:", error);
       }
     } catch (err) {
-      console.error("Supabase save error:", err);
+      console.error("[Events] Supabase save error:", err);
     }
 
     // Update cache

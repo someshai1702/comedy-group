@@ -5,20 +5,28 @@ interface PushNotificationSettingsProps {
 }
 
 export default function PushNotificationSettings({ familyId }: PushNotificationSettingsProps) {
-  const [permission, setPermission] = useState<NotificationPermission>("default");
-  const [subscribed, setSubscribed] = useState(false);
+  // Default to enabled - will be corrected after checking browser permission
+  const [permission, setPermission] = useState<NotificationPermission>("granted");
+  const [subscribed, setSubscribed] = useState(true); // Default to enabled
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // Check current permission and subscription status
+  // Check current permission and subscription status on mount
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
-      setPermission(Notification.permission);
+      const browserPerm = Notification.permission;
+      setPermission(browserPerm);
+
+      // If browser permission is denied, show correct state
+      if (browserPerm === "denied") {
+        setSubscribed(false);
+        return;
+      }
 
       // Check if already subscribed
       checkSubscription();
     }
-  }, []);
+  }, [familyId]);
 
   const checkSubscription = async () => {
     try {
