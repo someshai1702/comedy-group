@@ -47,62 +47,9 @@ async function readDatabaseFromFile(): Promise<any> {
 }
 
 async function readDatabase() {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_KEY;
-  
-  console.log("readDatabase: supabaseUrl =", supabaseUrl ? "set" : "undefined");
-  console.log("readDatabase: supabaseKey =", supabaseKey ? supabaseKey.substring(0, 10) + "..." : "undefined");
-  console.log("readDatabase: supabase client =", supabase ? "exists" : "null");
-  
-  // Skip Supabase if credentials are invalid or placeholder
-  const isValidSupabase = supabase && supabaseUrl && supabaseKey && 
-    !["undefined", "null", "your-", "sb_"].every(v => supabaseKey.startsWith(v) || supabaseKey.includes(v));
-  
-  // Check if key looks valid (starts with eyJ for JWT, longer than 50 chars)
-  const hasValidKey = supabaseKey && supabaseKey.length > 50 && !supabaseKey.startsWith("sb_") && !supabaseKey.startsWith("yjiw");
-  
-  console.log("readDatabase: isValidSupabase =", isValidSupabase);
-  console.log("readDatabase: hasValidKey =", hasValidKey);
-  
-  if (!isValidSupabase || !hasValidKey) {
-    console.log("readDatabase: falling back to local file");
-    return await readDatabaseFromFile();
-  }
-
-  try {
-    const result = await withTimeout(
-      Promise.all([
-        supabase.from("families").select("*"),
-        supabase.from("menu_items").select("*"),
-        supabase.from("events").select("*"),
-        supabase.from("rsvps").select("*"),
-        supabase.from("notifications").select("*").order("createdAt", { ascending: false })
-      ]),
-      3000
-    );
-    
-    const [familiesResult, menuItems, events, rsvps, notifications] = result;
-
-    const menu: any = { starters: [], mainCourse: [], roti: [], rice: [], dessert: [], drinks: [] };
-    if (menuItems.data) {
-      for (const item of menuItems.data) {
-        if (menu[item.category]) {
-          menu[item.category].push({ id: item.id, name: item.name });
-        }
-      }
-    }
-
-    return {
-      families: familiesResult.data || [],
-      menu,
-      events: events.data || [],
-      rsvps: rsvps.data || [],
-      notifications: notifications.data || []
-    };
-  } catch (error) {
-    console.error("Error reading database from Supabase, using fallback:", error);
-    return await readDatabaseFromFile();
-  }
+  // Always use local file storage for now
+  // Supabase integration can be added later
+  return await readDatabaseFromFile();
 }
 
 async function writeDatabaseToFile(db: any): Promise<void> {
@@ -118,115 +65,9 @@ async function withTimeout<T>(promise: Promise<T>, ms: number = 3000): Promise<T
 }
 
 async function writeDatabase(db: any) {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_KEY;
-  
-  console.log("writeDatabase: supabaseUrl =", supabaseUrl ? "set" : "undefined");
-  console.log("writeDatabase: supabaseKey =", supabaseKey ? supabaseKey.substring(0, 10) + "..." : "undefined");
-  console.log("writeDatabase: supabase client =", supabase ? "exists" : "null");
-  
-  // Skip Supabase if credentials are invalid or placeholder
-  const isValidSupabase = supabase && supabaseUrl && supabaseKey && 
-    !["undefined", "null", "your-", "sb_", "eyJ"].every(v => supabaseKey.startsWith(v) || supabaseKey.includes(v));
-  
-  // Also check if key looks like a valid JWT (starts with eyJ) or is too short
-  const hasValidKey = supabaseKey && supabaseKey.length > 50 && !supabaseKey.startsWith("sb_") && !supabaseKey.startsWith("yjiw");
-  
-  console.log("writeDatabase: isValidSupabase =", isValidSupabase);
-  console.log("writeDatabase: hasValidKey =", hasValidKey);
-  
-  if (!isValidSupabase || !hasValidKey) {
-    console.log("writeDatabase: using local file storage");
-    return await writeDatabaseToFile(db);
-  }
-
-  try {
-    // Try Supabase with timeout, fall back to local on failure
-    await withTimeout((async () => {
-      const { data: existingFamilies } = await supabase.from("families").select("id");
-      if (existingFamilies) {
-        const dbIds = db.families.map((f: any) => f.id);
-        const toDelete = existingFamilies.map((f: any) => f.id).filter(id => !dbIds.includes(id));
-        if (toDelete.length > 0) {
-          await supabase.from("families").delete().in("id", toDelete);
-        }
-      }
-      if (db.families.length > 0) {
-        await supabase.from("families").upsert(db.families.map((f: any) => ({
-          id: f.id, name: f.name, adults: f.adults, children: f.children, pin: f.pin, photoUrl: f.photoUrl
-        })));
-      }
-
-      const menuItems: any[] = [];
-      for (const category of Object.keys(db.menu)) {
-        for (const item of db.menu[category]) {
-          menuItems.push({ id: item.id, name: item.name, category: category });
-        }
-      }
-      const { data: existingMenuItems } = await supabase.from("menu_items").select("id");
-      if (existingMenuItems) {
-        const dbIds = menuItems.map((item: any) => item.id);
-        const toDelete = existingMenuItems.map((item: any) => item.id).filter(id => !dbIds.includes(id));
-        if (toDelete.length > 0) {
-          await supabase.from("menu_items").delete().in("id", toDelete);
-        }
-      }
-      if (menuItems.length > 0) {
-        await supabase.from("menu_items").upsert(menuItems);
-      }
-
-      const { data: existingEvents } = await supabase.from("events").select("id");
-      if (existingEvents) {
-        const dbIds = db.events.map((e: any) => e.id);
-        const toDelete = existingEvents.map((e: any) => e.id).filter(id => !dbIds.includes(id));
-        if (toDelete.length > 0) {
-          await supabase.from("events").delete().in("id", toDelete);
-        }
-      }
-      if (db.events.length > 0) {
-        await supabase.from("events").upsert(db.events.map((e: any) => ({
-          id: e.id, name: e.name || "", type: e.type, hostFamilyId: e.hostFamilyId,
-          date: e.date, time: e.time, restaurant: e.restaurant || "", address: e.address || "",
-          googleMapsUrl: e.googleMapsUrl || "", deadline: e.deadline || "", notes: e.notes || "",
-          isActive: e.isActive !== false
-        })));
-      }
-
-      const { data: existingRsvps } = await supabase.from("rsvps").select("eventId, familyId");
-      if (existingRsvps) {
-        const dbKeys = db.rsvps.map((r: any) => `${r.eventId}_${r.familyId}`);
-        const toDelete = existingRsvps.filter((r: any) => !dbKeys.includes(`${r.eventId}_${r.familyId}`));
-        for (const item of toDelete) {
-          await supabase.from("rsvps").delete().match({ eventId: item.eventId, familyId: item.familyId });
-        }
-      }
-      if (db.rsvps.length > 0) {
-        await supabase.from("rsvps").upsert(db.rsvps.map((r: any) => ({
-          eventId: r.eventId, familyId: r.familyId, attending: r.attending, reason: r.reason || "",
-          adultsAttendingCount: r.adsAttendingCount || 0, childrenAttendingCount: r.childrenAttendingCount || 0,
-          order: r.order || {}, specialInstructions: r.specialInstructions || "", updatedAt: r.updatedAt
-        })));
-      }
-
-      const { data: existingNotifs } = await supabase.from("notifications").select("id");
-      if (existingNotifs) {
-        const dbIds = db.notifications.map((n: any) => n.id);
-        const toDelete = existingNotifs.map((n: any) => n.id).filter(id => !dbIds.includes(id));
-        if (toDelete.length > 0) {
-          await supabase.from("notifications").delete().in("id", toDelete);
-        }
-      }
-      if (db.notifications.length > 0) {
-        await supabase.from("notifications").upsert(db.notifications.map((n: any) => ({
-          id: n.id, eventId: n.eventId || null, title: n.title, message: n.message,
-          type: n.type, createdAt: n.createdAt
-        })));
-      }
-    })());
-  } catch (error) {
-    console.error("Supabase error, falling back to local storage:", error);
-    await writeDatabaseToFile(db);
-  }
+  // Always use local file storage for now
+  // Supabase integration can be added later
+  await writeDatabaseToFile(db);
 }
 
 // GET /api/db
@@ -237,7 +78,6 @@ app.get("/db", async (req, res) => {
 
 // POST /api/login
 app.post("/login", async (req, res) => {
-  console.log("POST /login called");
   const { familyId, pin } = req.body;
   if (!familyId || !pin) {
     return res.status(400).json({ error: "Family ID and PIN are required" });
@@ -255,20 +95,15 @@ app.post("/login", async (req, res) => {
 
 // POST /api/families
 app.post("/families", async (req, res) => {
-  console.log("POST /families called");
   const { name, adults, children, pin, photoUrl } = req.body;
   if (!name || !pin) {
     return res.status(400).json({ error: "Family Name and PIN are required" });
   }
-  console.log("Reading database...");
   const db = await readDatabase();
-  console.log("Database read complete");
   const id = name.toLowerCase().replace(/\s+/g, "_") + "_" + Date.now();
   const newFamily = { id, name, adults: Array.isArray(adults) ? adults : [], children: Array.isArray(children) ? children : [], pin, photoUrl: photoUrl || "" };
   db.families.push(newFamily);
-  console.log("Writing database...");
   await writeDatabase(db);
-  console.log("Database write complete");
   res.json({ success: true, family: newFamily });
 });
 
