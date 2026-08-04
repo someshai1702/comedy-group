@@ -27,9 +27,14 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 // Database Helpers
-async function readDatabase() {
-  if (!supabase) {
-    console.error("[Supabase] Error: Supabase client is not initialized.");
+
+// Fallback: Read from local db.json file
+async function readDatabaseFromFile(): Promise<any> {
+  try {
+    const data = await fs.readFile(DB_FILE, "utf-8");
+    return JSON.parse(data);
+  } catch (error) {
+    console.error("Error reading local db.json file:", error);
     return {
       families: [],
       menu: { starters: [], mainCourse: [], roti: [], rice: [], dessert: [], drinks: [] },
@@ -37,6 +42,14 @@ async function readDatabase() {
       rsvps: [],
       notifications: []
     };
+  }
+}
+
+async function readDatabase() {
+  // Use local db.json file as primary source (works without Supabase)
+  if (!supabase || !supabaseUrl || !supabaseKey) {
+    console.log("[Database] Using local db.json file (Supabase not configured)");
+    return await readDatabaseFromFile();
   }
   try {
     const [
@@ -85,10 +98,22 @@ async function readDatabase() {
   }
 }
 
+// Fallback: Write to local db.json file
+async function writeDatabaseToFile(db: any): Promise<void> {
+  try {
+    await fs.writeFile(DB_FILE, JSON.stringify(db, null, 2), "utf-8");
+    console.log("[Database] Saved to local db.json file");
+  } catch (error) {
+    console.error("Error writing to local db.json file:", error);
+    throw error;
+  }
+}
+
 async function writeDatabase(db: any) {
-  if (!supabase) {
-    console.error("[Supabase] Error: Supabase client is not initialized.");
-    throw new Error("Supabase client is not initialized. Please configure environment variables in Vercel.");
+  // Use local db.json file when Supabase is not configured
+  if (!supabase || !supabaseUrl || !supabaseKey) {
+    console.log("[Database] Writing to local db.json file (Supabase not configured)");
+    return await writeDatabaseToFile(db);
   }
   try {
     // 1. Sync Families
