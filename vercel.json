@@ -12,6 +12,7 @@
     }
   ],
   "routes": [
+    { "src": "/api/(.*)", "dest": "/api/serverless.ts" },
     { "src": "/((?!api/).*)", "dest": "/index.html" }
   ]
 }
