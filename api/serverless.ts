@@ -82,10 +82,10 @@ async function writeDatabase(db: any) {
   await writeDatabaseToFile(db);
 }
 
-// GET /api/db - UPDATED AT 2024-XX-XX
+// GET /api/db - UPDATED AT 2024-XX-XX-2
 app.get("/db", async (req, res) => {
   const db = await readDatabase();
-  res.json(db);
+  res.json({ ...db, _updated: Date.now() });
 });
 
 // GET /api/families - TEST ENDPOINT
