@@ -14,6 +14,7 @@ app.use(express.json());
 app.use((req, res, next) => {
   if (req.path.startsWith("/api")) {
     req.url = req.path.slice(4) || "/";
+    req.path = req.path.slice(4) || "/"; // Also strip from req.path for route matching
   }
   next();
 });
@@ -349,11 +350,14 @@ app.post("/reset-db", async (req, res) => {
   res.json({ success: true, db: cleanDb });
 });
 
-// Serve static files and SPA fallback (only for non-API routes)
+// Serve static files and SPA fallback
+// This should only be reached for non-API GET requests after the prefix is stripped
 app.use((req, res, next) => {
-  if (req.path.startsWith("/api")) {
+  // Only serve SPA for GET requests that aren't API routes
+  if (req.method !== "GET") {
     return next();
   }
+  
   const indexPath = path.join(process.cwd(), "dist", "index.html");
   fs.readFile(indexPath, "utf-8")
     .then(content => {
