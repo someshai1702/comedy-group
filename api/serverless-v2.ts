@@ -19,7 +19,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const DB_FILE = path.join(process.cwd(), "db.json");
+const DB_FILE = path.join(process.cwd(), "data", "db.json");
 
 let aiClient: GoogleGenAI | null = null;
 function getGeminiClient(): GoogleGenAI | null {
