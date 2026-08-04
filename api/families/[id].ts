@@ -57,20 +57,53 @@ async function saveFamily(family: any) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // GET /api/families - List all
-  if (req.method === "GET") {
-    const families = await getFamilies();
-    return res.json({ success: true, families });
+  // Extract ID from path: /api/[id] -> the id is not directly available, need to check query
+  // For /api/families/sharma, Vercel routes it to /api/[id] with query.familyId or similar
+  const url = req.url || "";
+  const parts = url.split("/").filter(Boolean);
+  // parts = ["api", "families", "sharma"] for /api/families/sharma
+  const id = parts[parts.length - 1];
+  
+  if (!id || id === "[id]") {
+    return res.status(400).json({ error: "Family ID required" });
   }
 
-  // POST /api/families - Create
-  if (req.method === "POST") {
+  // GET /api/families/:id
+  if (req.method === "GET") {
+    const families = await getFamilies();
+    const family = families.find((f: any) => f.id === id);
+    if (!family) return res.status(404).json({ error: "Family not found" });
+    return res.json({ success: true, family });
+  }
+
+  // PUT /api/families/:id
+  if (req.method === "PUT") {
     const { name, adults, children, pin, photoUrl } = req.body;
-    if (!name || !pin) return res.status(400).json({ error: "Name and PIN required" });
-    const id = name.toLowerCase().replace(/\s+/g, "_") + "_" + Date.now();
-    const newFamily = { id, name, adults: adults || [], children: children || [], pin, photoUrl: photoUrl || "" };
-    await saveFamily(newFamily);
-    return res.json({ success: true, family: newFamily });
+    const families = await getFamilies();
+    const existing = families.find((f: any) => f.id === id);
+    if (!existing) return res.status(404).json({ error: "Family not found" });
+    const updated = {
+      ...existing,
+      ...(name !== undefined && { name }),
+      ...(adults !== undefined && { adults }),
+      ...(children !== undefined && { children }),
+      ...(pin !== undefined && { pin }),
+      ...(photoUrl !== undefined && { photoUrl })
+    };
+    await saveFamily(updated);
+    return res.json({ success: true, family: updated });
+  }
+
+  // PATCH /api/families/:id/change-pin
+  if (req.method === "PATCH" && url.includes("/change-pin")) {
+    const { currentPin, newPin } = req.body;
+    const families = await getFamilies();
+    const family = families.find((f: any) => f.id === id);
+    if (!family) return res.status(404).json({ error: "Family not found" });
+    if (family.pin !== currentPin) return res.status(401).json({ error: "Current PIN incorrect" });
+    const updated = { ...family, pin: newPin };
+    await saveFamily(updated);
+    return res.json({ success: true, family: updated });
   }
 
   return res.status(405).json({ error: "Method not allowed" });
