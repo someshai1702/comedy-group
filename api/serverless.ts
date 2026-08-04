@@ -50,10 +50,14 @@ async function readDatabase() {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_KEY;
   
-  // Check if Supabase credentials are valid
-  if (!supabase || !supabaseUrl || !supabaseKey || 
-      supabaseKey === "undefined" || supabaseKey === "null" ||
-      supabaseKey.startsWith("sb_")) {
+  // Skip Supabase if credentials are invalid or placeholder
+  const isValidSupabase = supabase && supabaseUrl && supabaseKey && 
+    !["undefined", "null", "your-", "sb_"].every(v => supabaseKey.startsWith(v) || supabaseKey.includes(v));
+  
+  // Check if key looks valid (starts with eyJ for JWT, longer than 50 chars)
+  const hasValidKey = supabaseKey && supabaseKey.length > 50 && !supabaseKey.startsWith("sb_") && !supabaseKey.startsWith("yjiw");
+  
+  if (!isValidSupabase || !hasValidKey) {
     return await readDatabaseFromFile();
   }
 
@@ -109,10 +113,15 @@ async function writeDatabase(db: any) {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_KEY;
   
-  // Check if Supabase credentials are valid
-  if (!supabase || !supabaseUrl || !supabaseKey || 
-      supabaseKey === "undefined" || supabaseKey === "null" ||
-      supabaseKey.startsWith("sb_")) {
+  // Skip Supabase if credentials are invalid or placeholder
+  const isValidSupabase = supabase && supabaseUrl && supabaseKey && 
+    !["undefined", "null", "your-", "sb_", "eyJ"].every(v => supabaseKey.startsWith(v) || supabaseKey.includes(v));
+  
+  // Also check if key looks like a valid JWT (starts with eyJ) or is too short
+  const hasValidKey = supabaseKey && supabaseKey.length > 50 && !supabaseKey.startsWith("sb_") && !supabaseKey.startsWith("yjiw");
+  
+  if (!isValidSupabase || !hasValidKey) {
+    console.log("Using local file storage (Supabase not configured)");
     return await writeDatabaseToFile(db);
   }
 
