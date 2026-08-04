@@ -54,6 +54,11 @@ async function readDatabase() {
 }
 
 // Test endpoint for debugging POST requests - DEPLOYED AT 2024-XX-XX
+app.get("/test", async (req, res) => {
+  console.log("GET /test called");
+  res.json({ success: true, method: "GET" });
+});
+
 app.post("/test", async (req, res) => {
   console.log("POST /test called with body:", req.body);
   res.json({ success: true, received: req.body });
