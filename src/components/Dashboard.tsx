@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Family, Event, RSVP, GroupNotification } from "../types";
 import { Calendar, MapPin, Clock, ArrowRight, Bell, AlertCircle, Plus, CheckCircle2, Lock, Unlock, HelpCircle, Film } from "lucide-react";
+import PushNotificationSettings from "./PushNotificationSettings";
 
 interface DashboardProps {
   currentFamily: Family;
@@ -456,6 +457,9 @@ ${evt.notes ? `💬 *Notes:* ${evt.notes}\n` : ""}
               )}
             </div>
           </section>
+
+          {/* Push Notification Settings */}
+          <PushNotificationSettings familyId={currentFamily.id} />
 
           {/* Group Info Box */}
           <div className="bg-gradient-to-br from-orange-50 to-amber-50/40 border border-orange-100 rounded-2xl p-5 space-y-3 text-xs">

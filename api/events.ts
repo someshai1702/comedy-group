@@ -196,6 +196,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           fromFamilyId: hostFamilyId
         })
       });
+
+      // Also send push notification
+      await fetch(`${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"}/api/push`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "send",
+          title: `🎉 New ${newEvent.type}!`,
+          body: `${newEvent.name} on ${newEvent.date}${newEvent.restaurant ? ` at ${newEvent.restaurant}` : ""}`,
+          data: {
+            type: "event",
+            eventId: newEvent.id,
+            eventName: newEvent.name,
+            date: newEvent.date,
+            restaurant: newEvent.restaurant
+          },
+          targetFamilyId: "all"
+        })
+      });
     } catch (notifErr) {
       console.error("Failed to create notification:", notifErr);
     }
