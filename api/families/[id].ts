@@ -57,12 +57,17 @@ async function saveFamily(family: any) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Extract ID from path: /api/[id] -> the id is not directly available, need to check query
-  // For /api/families/sharma, Vercel routes it to /api/[id] with query.familyId or similar
   const url = req.url || "";
-  const parts = url.split("/").filter(Boolean);
-  // parts = ["api", "families", "sharma"] for /api/families/sharma
-  const id = parts[parts.length - 1];
+  
+  // Vercel passes the dynamic route parameter in req.query
+  // For /api/families/sharma -> req.query = { id: "sharma" }
+  let id = (req.query.id as string) || (req.query as any)?.id;
+  
+  // Fallback: extract from URL if query is not populated
+  if (!id || id === "[id]") {
+    const parts = url.split("/").filter(Boolean);
+    id = parts[parts.length - 1];
+  }
   
   if (!id || id === "[id]") {
     return res.status(400).json({ error: "Family ID required" });
