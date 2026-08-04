@@ -10,6 +10,14 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
+// Strip /api prefix for Vercel serverless
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    req.url = req.path.slice(4) || "/";
+  }
+  next();
+});
+
 const DB_FILE = path.join(process.cwd(), "db.json");
 
 let aiClient: GoogleGenAI | null = null;
@@ -456,3 +464,8 @@ app.post("/reset-db", async (req, res) => {
 
 // Export for Vercel serverless
 export default app;
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
