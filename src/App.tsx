@@ -55,9 +55,30 @@ export default function App() {
   const fetchDbState = async () => {
     setSyncing(true);
     try {
-      const response = await fetch("/api/db");
-      if (!response.ok) throw new Error("Could not pull state");
-      const data = await response.json();
+      // Fetch db and events in parallel
+      const [dbResponse, eventsResponse] = await Promise.all([
+        fetch("/api/db"),
+        fetch("/api/events")
+      ]);
+      
+      if (!dbResponse.ok) throw new Error("Could not pull state");
+      
+      const data = await dbResponse.json();
+      
+      // Also fetch events to merge with db state
+      if (eventsResponse.ok) {
+        const eventsData = await eventsResponse.json();
+        if (eventsData.events && eventsData.events.length > 0) {
+          // Merge events from events API
+          const existingIds = new Set(data.events.map((e: any) => e.id));
+          for (const evt of eventsData.events) {
+            if (!existingIds.has(evt.id)) {
+              data.events.unshift(evt);
+            }
+          }
+        }
+      }
+      
       setDbState(data);
     } catch (err) {
       console.error("Error synchronizing with Express API server:", err);
