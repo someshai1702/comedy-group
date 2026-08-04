@@ -73,7 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      const newEvent = {
+      const newEvent: any = {
         name: name || "",
         type,
         host_family_id: familyId,
@@ -82,10 +82,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         restaurant: restaurant || "",
         address: address || "",
         google_maps_url: googleMapsUrl || "",
-        deadline: deadline || new Date(new Date(date + "T" + time).getTime() - 4 * 60 * 60 * 1000).toISOString(),
         notes: notes || "",
         is_active: true
       };
+      
+      // Only add deadline if the column exists
+      if (deadline) {
+        newEvent.deadline = deadline;
+      }
 
       const { data, error } = await supabase
         .from("events")
