@@ -4,11 +4,11 @@ import fs from "fs/promises";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { supabase } from "../supabase.js";
-import serverlessExpress from "@vendia/serverless-express";
 
 dotenv.config();
 
 const app = express();
+app.use(express.json());
 
 const DB_FILE = path.join(process.cwd(), "db.json");
 
@@ -455,6 +455,4 @@ app.post("/reset-db", async (req, res) => {
 });
 
 // Export for Vercel serverless
-app.use(express.json());
-const serverlessHandler = serverlessExpress({ app });
-export default serverlessHandler;
+export default app;
