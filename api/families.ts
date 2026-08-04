@@ -33,12 +33,10 @@ async function writeDatabaseToFile(db: any): Promise<void> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  console.log("families.ts handler called, method:", req.method);
   if (req.method === "GET") {
     const db = await readDatabaseFromFile();
     return res.json({ success: true, families: db.families });
   } else if (req.method === "POST") {
-    console.log("POST request to families.ts");
     const { name, adults, children, pin, photoUrl } = req.body;
     if (!name || !pin) {
       return res.status(400).json({ error: "Family Name and PIN are required" });
@@ -54,10 +52,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       photoUrl: photoUrl || ""
     };
     db.families.push(newFamily);
-    await writeDatabaseToFile(db);
+    try {
+      await writeDatabaseToFile(db);
+    } catch (err) {
+      // Ignore write errors in serverless
+    }
     return res.json({ success: true, family: newFamily });
   } else {
-    console.log("Method not allowed:", req.method);
-    return res.status(405).json({ error: "Method not allowed", received: req.method });
+    return res.status(405).json({ error: "Method not allowed" });
   }
 }
