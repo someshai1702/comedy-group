@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import path from "path";
 import fs from "fs/promises";
 import { GoogleGenAI } from "@google/genai";
@@ -8,9 +8,9 @@ import { supabase } from "../supabase.js";
 dotenv.config();
 
 const app = express();
-const DB_FILE = path.join(process.cwd(), "db.json");
-
 app.use(express.json());
+
+const DB_FILE = path.join(process.cwd(), "db.json");
 
 let aiClient: GoogleGenAI | null = null;
 function getGeminiClient(): GoogleGenAI | null {
