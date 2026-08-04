@@ -74,22 +74,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const newEvent: any = {
-        name: name || "",
         type,
         host_family_id: familyId,
         date,
         time,
-        restaurant: restaurant || "",
-        address: address || "",
-        google_maps_url: googleMapsUrl || "",
-        notes: notes || "",
         is_active: true
       };
       
-      // Only add deadline if the column exists
-      if (deadline) {
-        newEvent.deadline = deadline;
-      }
+      // Only add optional fields if they have values
+      if (name) newEvent.name = name;
+      if (restaurant) newEvent.restaurant = restaurant;
+      if (address) newEvent.address = address;
+      if (notes) newEvent.notes = notes;
+      if (googleMapsUrl) newEvent.google_maps_url = googleMapsUrl;
+      if (deadline) newEvent.deadline = deadline;
 
       const { data, error } = await supabase
         .from("events")
