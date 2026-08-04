@@ -56,18 +56,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from("families")
-      .select("id, name, photo_url, address");
+    // Fetch families and events in parallel
+    const [familiesResult, eventsResult, rsvpsResult] = await Promise.all([
+      supabase.from("families").select("id, name, photo_url, address"),
+      supabase.from("events").select("*").order("created_at", { ascending: false }),
+      supabase.from("rsvps").select("*")
+    ]);
 
-    if (!error && data && data.length > 0) {
-      const families = data.map((row: any) => {
+    let families = DEFAULT_DB.families;
+    if (!familiesResult.error && familiesResult.data && familiesResult.data.length > 0) {
+      families = familiesResult.data.map((row: any) => {
         let extra: any = {};
         try {
           if (row.address) extra = JSON.parse(row.address);
         } catch {}
         // Use simple ID like "sharma", "patel" not "sharma_family"
-        const namePart = row.name.split(" ")[0].toLowerCase();
+        const namePart = row.name.split(" ")[0].toLowerCase().replace(/[^a-z]/g, "");
         return {
           id: namePart,
           name: row.name,
@@ -77,11 +81,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           photoUrl: row.photo_url || extra.photoUrl || ""
         };
       });
-      return res.json({ ...DEFAULT_DB, families, _version: "db_v1", _source: "supabase" });
     }
+
+    let events = DEFAULT_DB.events;
+    if (!eventsResult.error && eventsResult.data && eventsResult.data.length > 0) {
+      events = eventsResult.data.map((row: any) => ({
+        id: row.id,
+        name: row.name || "",
+        type: row.type,
+        hostFamilyId: row.host_family_id,
+        date: row.date,
+        time: row.time,
+        restaurant: row.restaurant || "",
+        address: row.address || "",
+        googleMapsUrl: row.google_maps_url || "",
+        deadline: row.deadline,
+        notes: row.notes || "",
+        isActive: row.is_active !== false
+      }));
+    }
+
+    let rsvps = DEFAULT_DB.rsvps;
+    if (!rsvpsResult.error && rsvpsResult.data && rsvpsResult.data.length > 0) {
+      rsvps = rsvpsResult.data.map((row: any) => ({
+        eventId: row.event_id,
+        familyId: row.family_id,
+        attending: row.attending,
+        reason: row.reason || "",
+        adultsAttendingCount: row.adults_attending_count || 0,
+        childrenAttendingCount: row.children_attending_count || 0,
+        order: row.order || {},
+        specialInstructions: row.special_instructions || "",
+        updatedAt: row.updated_at
+      }));
+    }
+
+    return res.json({
+      families,
+      menu: DEFAULT_DB.menu,
+      events,
+      rsvps,
+      notifications: [],
+      _version: "db_v2",
+      _source: "supabase"
+    });
   } catch (err) {
     console.error("Supabase error:", err);
+    return res.json({ ...DEFAULT_DB, _version: "db_v1", _source: "default" });
   }
-
-  return res.json({ ...DEFAULT_DB, _version: "db_v1", _source: "default" });
 }

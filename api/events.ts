@@ -1,0 +1,112 @@
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.SUPABASE_URL || "https://tmdsgjheinmjxqthzmvm.supabase.co";
+const supabaseKey = process.env.SUPABASE_KEY || "sb_publishable_yjiwdDGSPLJOO27mhdjU-g_XR-ir5Bg";
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// GET /api/events - List all events
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const { method, query, body } = req;
+  const id = query.id as string;
+
+  if (method === "GET") {
+    try {
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return res.json({ success: true, events: data || [] });
+    } catch (err) {
+      console.error("Error fetching events:", err);
+      return res.status(500).json({ error: "Failed to fetch events" });
+    }
+  }
+
+  if (method === "POST") {
+    const { name, type, hostFamilyId, date, time, restaurant, address, googleMapsUrl, deadline, notes } = body;
+
+    if (!type || !hostFamilyId || !date || !time) {
+      return res.status(400).json({ error: "Missing required event fields (type, hostFamilyId, date, time)" });
+    }
+
+    try {
+      const newEvent = {
+        name: name || "",
+        type,
+        host_family_id: hostFamilyId,
+        date,
+        time,
+        restaurant: restaurant || "",
+        address: address || "",
+        google_maps_url: googleMapsUrl || "",
+        deadline: deadline || new Date(new Date(date + "T" + time).getTime() - 4 * 60 * 60 * 1000).toISOString(),
+        notes: notes || "",
+        is_active: true
+      };
+
+      const { data, error } = await supabase
+        .from("events")
+        .insert([newEvent])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return res.json({ success: true, event: data });
+    } catch (err) {
+      console.error("Error creating event:", err);
+      return res.status(500).json({ error: "Failed to create event" });
+    }
+  }
+
+  if (method === "PUT" && id) {
+    const { name, type, hostFamilyId, date, time, restaurant, address, googleMapsUrl, deadline, notes, isActive } = body;
+
+    try {
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name;
+      if (type !== undefined) updateData.type = type;
+      if (hostFamilyId !== undefined) updateData.host_family_id = hostFamilyId;
+      if (date !== undefined) updateData.date = date;
+      if (time !== undefined) updateData.time = time;
+      if (restaurant !== undefined) updateData.restaurant = restaurant;
+      if (address !== undefined) updateData.address = address;
+      if (googleMapsUrl !== undefined) updateData.google_maps_url = googleMapsUrl;
+      if (deadline !== undefined) updateData.deadline = deadline;
+      if (notes !== undefined) updateData.notes = notes;
+      if (isActive !== undefined) updateData.is_active = isActive;
+
+      const { data, error } = await supabase
+        .from("events")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return res.json({ success: true, event: data });
+    } catch (err) {
+      console.error("Error updating event:", err);
+      return res.status(500).json({ error: "Failed to update event" });
+    }
+  }
+
+  if (method === "DELETE" && id) {
+    try {
+      const { error } = await supabase
+        .from("events")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      return res.json({ success: true });
+    } catch (err) {
+      console.error("Error deleting event:", err);
+      return res.status(500).json({ error: "Failed to delete event" });
+    }
+  }
+
+  return res.status(405).json({ error: "Method not allowed" });
+}
