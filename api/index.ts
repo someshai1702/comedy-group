@@ -151,20 +151,20 @@ async function getAllData() {
 
 // ==================== ROUTES ====================
 
-// GET /api/db - Full database
-app.get("/db", async (req: Request, res: Response) => {
+// GET /db - Full database
+app.get("/api/db", async (req: Request, res: Response) => {
   const db = await getAllData();
   res.json({ ...db, _version: "supabase_v1" });
 });
 
 // GET /api/families - List families
-app.get("/families", async (req: Request, res: Response) => {
+app.get("/api/families", async (req: Request, res: Response) => {
   const db = await getAllData();
   res.json({ success: true, families: db.families });
 });
 
 // POST /api/families - Create family
-app.post("/families", async (req: Request, res: Response) => {
+app.post("/api/families", async (req: Request, res: Response) => {
   const { name, adults, children, pin, photoUrl } = req.body;
   if (!name || !pin) {
     return res.status(400).json({ error: "Name and PIN required" });
@@ -184,7 +184,7 @@ app.post("/families", async (req: Request, res: Response) => {
 });
 
 // GET /api/families/:id - Get single family
-app.get("/families/:id", async (req: Request, res: Response) => {
+app.get("/api/families/:id", async (req: Request, res: Response) => {
   const { id } = req.params;
   const db = await getAllData();
   const family = db.families.find((f: any) => f.id === id);
@@ -193,7 +193,7 @@ app.get("/families/:id", async (req: Request, res: Response) => {
 });
 
 // PUT /api/families/:id - Update family
-app.put("/families/:id", async (req: Request, res: Response) => {
+app.put("/api/families/:id", async (req: Request, res: Response) => {
   const { id } = req.params;
   const { name, adults, children, pin, photoUrl } = req.body;
   
@@ -218,7 +218,7 @@ app.put("/families/:id", async (req: Request, res: Response) => {
 });
 
 // PATCH /api/families/:id/change-pin - Change PIN
-app.patch("/families/:id/change-pin", async (req: Request, res: Response) => {
+app.patch("/api/families/:id/change-pin", async (req: Request, res: Response) => {
   const { id } = req.params;
   const { currentPin, newPin } = req.body;
   
@@ -242,7 +242,7 @@ app.patch("/families/:id/change-pin", async (req: Request, res: Response) => {
 });
 
 // POST /api/login - Login
-app.post("/login", async (req: Request, res: Response) => {
+app.post("/api/login", async (req: Request, res: Response) => {
   const { familyId, pin } = req.body;
   if (!familyId || !pin) return res.status(400).json({ error: "Family ID and PIN required" });
   
@@ -255,13 +255,13 @@ app.post("/login", async (req: Request, res: Response) => {
 });
 
 // GET /api/events - List events
-app.get("/events", async (req: Request, res: Response) => {
+app.get("/api/events", async (req: Request, res: Response) => {
   const db = await getAllData();
   res.json({ success: true, events: db.events });
 });
 
 // POST /api/events - Create event
-app.post("/events", async (req: Request, res: Response) => {
+app.post("/api/events", async (req: Request, res: Response) => {
   const { name, type, hostFamilyId, date, time, restaurant, address, googleMapsUrl, deadline, notes } = req.body;
   if (!name || !type || !hostFamilyId || !date) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -290,7 +290,7 @@ app.post("/events", async (req: Request, res: Response) => {
 });
 
 // GET /api/events/:id - Get event
-app.get("/events/:id", async (req: Request, res: Response) => {
+app.get("/api/events/:id", async (req: Request, res: Response) => {
   const { id } = req.params;
   const db = await getAllData();
   const event = db.events.find((e: any) => e.id === id);
@@ -299,7 +299,7 @@ app.get("/events/:id", async (req: Request, res: Response) => {
 });
 
 // PATCH /api/events/:id/toggle-active - Toggle event active status
-app.patch("/events/:id/toggle-active", async (req: Request, res: Response) => {
+app.patch("/api/events/:id/toggle-active", async (req: Request, res: Response) => {
   const { id } = req.params;
   const db = await getAllData();
   const event = db.events.find((e: any) => e.id === id);
@@ -321,13 +321,13 @@ app.patch("/events/:id/toggle-active", async (req: Request, res: Response) => {
 });
 
 // GET /api/rsvps - List RSVPs
-app.get("/rsvps", async (req: Request, res: Response) => {
+app.get("/api/rsvps", async (req: Request, res: Response) => {
   const db = await getAllData();
   res.json({ success: true, rsvps: db.rsvps });
 });
 
 // POST /api/rsvps - Create RSVP
-app.post("/rsvps", async (req: Request, res: Response) => {
+app.post("/api/rsvps", async (req: Request, res: Response) => {
   const { eventId, familyId, familyName, membersAttending, items, notes } = req.body;
   if (!eventId || !familyId || !familyName) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -353,19 +353,19 @@ app.post("/rsvps", async (req: Request, res: Response) => {
 });
 
 // GET /api/menu - Get menu
-app.get("/menu", async (req: Request, res: Response) => {
+app.get("/api/menu", async (req: Request, res: Response) => {
   const db = await getAllData();
   res.json({ success: true, menu: db.menu });
 });
 
 // GET /api/notifications - Get notifications
-app.get("/notifications", async (req: Request, res: Response) => {
+app.get("/api/notifications", async (req: Request, res: Response) => {
   const db = await getAllData();
   res.json({ success: true, notifications: db.notifications });
 });
 
 // POST /api/generate-menu-suggestion - AI menu suggestion
-app.post("/generate-menu-suggestion", async (req: Request, res: Response) => {
+app.post("/api/generate-menu-suggestion", async (req: Request, res: Response) => {
   const { eventType, budget, dietaryRestrictions } = req.body;
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
@@ -388,12 +388,8 @@ if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(process.cwd(), "dist")));
 }
 
-// Export for Vercel or run locally
+// Export for Vercel
 export default async function handler(req: any, res: any) {
-  // Strip /api prefix
-  if (req.url.startsWith("/api")) {
-    req.url = req.url.slice(4) || "/";
-  }
   return new Promise((resolve, reject) => {
     app(req, res, (result: any) => {
       if (result instanceof Error) return reject(result);
