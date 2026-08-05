@@ -166,13 +166,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       console.log("[Events] Saving event with host_family_id:", familyUUID, "(from:", hostFamilyId, ")");
 
+      // Calculate deadline if not provided (default: 4 hours before event)
+      let deadlineDate = newEvent.deadline;
+      if (!deadlineDate) {
+        const eventDateTime = new Date(date + "T" + time);
+        deadlineDate = new Date(eventDateTime.getTime() - 4 * 60 * 60 * 1000).toISOString();
+      }
+
       const eventRow = {
         name: newEvent.name,
         type: newEvent.type,
         host_family_id: familyUUID,
         date: newEvent.date,
         time: newEvent.time,
-        last_order_date: newEvent.deadline || null,
+        last_order_date: deadlineDate, // Required field
         restaurant: newEvent.restaurant || null,
         address: newEvent.address || null,
         notes: newEvent.notes || null
@@ -186,6 +193,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (!error && data) {
         newEvent.id = data.id;
+        newEvent.deadline = deadlineDate;
         savedToSupabase = true;
         console.log("[Events] Successfully saved to Supabase:", data.id);
       } else if (error) {
@@ -297,6 +305,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (method === "DELETE" && id) {
+    // Get the requesting family from headers or body
+    const requestingFamilyId = body?.familyId || query?.familyId || req.headers["x-family-id"];
+    
+    // Find the event to check permissions
+    const eventToDelete = eventsCache?.find(e => e.id === id);
+    
+    if (!eventToDelete) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+    
+    // Check if the requesting family is the host or admin
+    const isHost = eventToDelete.hostFamilyId === requestingFamilyId;
+    const isAdmin = requestingFamilyId === "admin" || requestingFamilyId === "ee5a209b-0d3e-4a96-81ee-1b232d582983";
+    
+    if (!isHost && !isAdmin) {
+      return res.status(403).json({ 
+        error: "Not authorized", 
+        message: "Only the host family or admin can delete this event" 
+      });
+    }
+
+    console.log("[Events] Deleting event:", id, "by:", requestingFamilyId);
+
     // Remove from cache
     if (eventsCache) {
       eventsCache = eventsCache.filter(e => e.id !== id);
@@ -312,7 +343,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error("Supabase delete error:", err);
     }
 
-    return res.json({ success: true });
+    return res.json({ success: true, message: "Event deleted" });
   }
 
   return res.status(405).json({ error: "Method not allowed" });

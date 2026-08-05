@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Event, Family, RSVP, Menu } from "../types";
-import { MapPin, Calendar, Clock, ChevronLeft, AlertCircle, Save, Info, Plus, Minus, Check, ShieldAlert } from "lucide-react";
+import { MapPin, Calendar, Clock, ChevronLeft, AlertCircle, Save, Info, Plus, Minus, Check, ShieldAlert, Trash2 } from "lucide-react";
 
 interface EventDetailsProps {
   event: Event;
@@ -10,6 +10,7 @@ interface EventDetailsProps {
   menu: Menu;
   onBack: () => void;
   onSubmitRsvp: (rsvpData: any) => Promise<void>;
+  onDeleteEvent?: (eventId: string) => Promise<void>;
 }
 
 export default function EventDetails({
@@ -19,8 +20,16 @@ export default function EventDetails({
   rsvps,
   menu,
   onBack,
-  onSubmitRsvp
+  onSubmitRsvp,
+  onDeleteEvent
 }: EventDetailsProps) {
+  // Check if current user can delete this event (host or admin)
+  const isHost = currentFamily.id === event.hostFamilyId;
+  const isAdmin = currentFamily.id === "admin" || currentFamily.id === "ee5a209b-0d3e-4a96-81ee-1b232d582983";
+  const canDelete = isHost || isAdmin;
+  
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   // --- WhatsApp Sharing ---
   const getWhatsAppShareUrl = () => {
     const hostName = families.find(f => f.id === event.hostFamilyId)?.name || "Comedy Group Host";
@@ -217,13 +226,67 @@ ${event.googleMapsUrl ? `🔗 *Google Maps:* ${event.googleMapsUrl}\n` : ""}⏳ 
   return (
     <div className="max-w-4xl mx-auto px-4 pb-16 space-y-6">
       {/* Navigation */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-gray-500 hover:text-orange-600 transition-colors text-sm font-bold"
-      >
-        <ChevronLeft size={16} />
-        Back to Dashboard
-      </button>
+      <div className="flex items-center justify-between">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-gray-500 hover:text-orange-600 transition-colors text-sm font-bold"
+        >
+          <ChevronLeft size={16} />
+          Back to Dashboard
+        </button>
+        
+        {/* Delete Button - Only for Host or Admin */}
+        {canDelete && onDeleteEvent && (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="flex items-center gap-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors text-sm font-bold"
+          >
+            <Trash2 size={16} />
+            Delete Event
+          </button>
+        )}
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={32} className="text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Event?</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete "{event.name}"? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 py-3 px-4 border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    setDeleting(true);
+                    try {
+                      await onDeleteEvent(event.id);
+                    } catch (err) {
+                      console.error("Delete failed:", err);
+                      setDeleting(false);
+                      setShowDeleteConfirm(false);
+                    }
+                  }}
+                  disabled={deleting}
+                  className="flex-1 py-3 px-4 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50"
+                >
+                  {deleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Locked Event Warning */}
       {isLocked && (
