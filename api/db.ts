@@ -76,32 +76,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Helper to fetch RSVPs from either Supabase or fallback to /api/rsvps
-    async function fetchRsvpsFromSource() {
-      try {
-        const result = await supabase.from("rsvps").select("*");
-        if (!result.error && result.data && result.data.length > 0) {
-          return result;
-        }
-      } catch {}
-      // Fallback: try fetching from the rsvps API endpoint
+    // Fetch families and events first
+    const [familiesResult, eventsResult] = await Promise.all([
+      supabase.from("families").select("id, name, photo_url, address"),
+      supabase.from("events").select("*").order("created_at", { ascending: false })
+    ]);
+    
+    // Then fetch RSVPs with fallback
+    let rsvpsResult = { data: [], error: { message: "Initial" } };
+    
+    // Try Supabase first
+    try {
+      const result = await supabase.from("rsvps").select("*");
+      if (!result.error && result.data && result.data.length > 0) {
+        rsvpsResult = result;
+      }
+    } catch (e) {
+      console.log("Supabase RSVPs error:", e);
+    }
+    
+    // Fallback to rsvps cache API if Supabase returned no data
+    if (!rsvpsResult.data || rsvpsResult.data.length === 0) {
       try {
         const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://comedy-group-planning.vercel.app";
         const resp = await fetch(`${baseUrl}/api/rsvps`);
         if (resp.ok) {
           const data = await resp.json();
-          return { data: data.rsvps || [], error: null };
+          rsvpsResult = { data: data.rsvps || [], error: null };
+          console.log("Using RSVPs from cache:", rsvpsResult.data.length);
         }
-      } catch {}
-      return { data: [], error: { message: "Could not fetch RSVPs" } };
+      } catch (e) {
+        console.log("RSVP fallback error:", e);
+      }
     }
-
-    // Fetch families, events, and RSVPs in parallel
-    const [familiesResult, eventsResult, rsvpsResult] = await Promise.all([
-      supabase.from("families").select("id, name, photo_url, address"),
-      supabase.from("events").select("*").order("created_at", { ascending: false }),
-      fetchRsvpsFromSource()
-    ]);
 
     let families = DEFAULT_DB.families;
     if (!familiesResult.error && familiesResult.data && familiesResult.data.length > 0) {
