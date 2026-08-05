@@ -38,26 +38,22 @@ function rowToFamily(row: any): any {
 // Find family by simple ID
 async function findFamilyById(id: string): Promise<any | null> {
   try {
-    // Map IDs to actual family names in Supabase
-    const idToFamilyName: Record<string, string> = {
-      sharma: "Sharma Family",
-      patel: "Patel Family",
-      mangesh: "Mangesh Devi & Family",
-      joshi: "Joshi Family",
-      kapoor: "Kapoor Family",
-      malhotra: "Malhotra Family",
-      shah: "Shah Family",
-      admin: "Admin"
-    };
-    
-    const familyName = idToFamilyName[id] || id.charAt(0).toUpperCase() + id.slice(1) + " Family";
+    // Fetch all families and find the one matching the ID
     const { data, error } = await supabase
       .from("families")
-      .select("id, name, photo_url, address")
-      .ilike("name", familyName);
+      .select("id, name, photo_url, address");
     
-    if (error || !data || data.length === 0) return null;
-    return rowToFamily(data[0]);
+    if (error || !data) return null;
+    
+    // Find matching family by ID or by name prefix
+    const idLower = id.toLowerCase();
+    const matching = data.find((f: any) => {
+      const nameLower = f.name.toLowerCase();
+      return nameLower.startsWith(idLower) || nameLower.includes(idLower);
+    });
+    
+    if (matching) return rowToFamily(matching);
+    return null;
   } catch {
     return null;
   }
@@ -65,31 +61,25 @@ async function findFamilyById(id: string): Promise<any | null> {
 
 // Update family in Supabase
 async function updateFamilyInDb(id: string, updates: any): Promise<any | null> {
-  // Map IDs to actual family names in Supabase
-  const idToFamilyName: Record<string, string> = {
-    sharma: "Sharma Family",
-    patel: "Patel Family",
-    mangesh: "Mangesh Devi & Family",
-    joshi: "Joshi Family",
-    kapoor: "Kapoor Family",
-    malhotra: "Malhotra Family",
-    shah: "Shah Family",
-    admin: "Admin"
-  };
-  
-  const familyName = idToFamilyName[id] || id.charAt(0).toUpperCase() + id.slice(1) + " Family";
-  
   try {
-    // First get the current row
-    const { data: current } = await supabase
+    // First get the current row by finding matching family
+    const { data: allFamilies, error: fetchError } = await supabase
       .from("families")
-      .select("address, photo_url")
-      .ilike("name", familyName)
-      .single();
+      .select("id, name, address, photo_url");
+    
+    if (fetchError || !allFamilies) return null;
+    
+    const idLower = id.toLowerCase();
+    const matching = allFamilies.find((f: any) => {
+      const nameLower = f.name.toLowerCase();
+      return nameLower.startsWith(idLower) || nameLower.includes(idLower);
+    });
+    
+    if (!matching) return null;
     
     let extra: any = {};
-    if (current?.address) {
-      try { extra = JSON.parse(current.address); } catch {}
+    if (matching.address) {
+      try { extra = JSON.parse(matching.address); } catch {}
     }
     
     // Apply updates
@@ -104,11 +94,11 @@ async function updateFamilyInDb(id: string, updates: any): Promise<any | null> {
     const { data, error } = await supabase
       .from("families")
       .update({
-        name: updates.name || familyName,
+        name: updates.name || matching.name,
         photo_url: updates.photoUrl,
         address: JSON.stringify(extra)
       })
-      .ilike("name", familyName)
+      .eq("id", matching.id)
       .select()
       .single();
     
