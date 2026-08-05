@@ -114,9 +114,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // POST /api/families - Create or update family (id in body)
   if (req.method === "POST") {
+    console.log("[POST /api/families] body:", JSON.stringify(req.body), "rawBody:", req);
     const { id, name, adults, children, pin, photoUrl } = req.body || {};
     
-    console.log("[POST /api/families] id:", id, "name:", name);
+    console.log("[POST /api/families] parsed - id:", id, "name:", name);
     
     // If id is provided, update existing family
     if (id) {
