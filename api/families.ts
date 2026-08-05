@@ -43,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
   
-  console.log("[GET /api/families] req.query:", req.query, "req.url:", req.url, "familyId:", familyId);
+  console.log("[API /api/families] Method:", req.method, "req.query:", req.query, "req.url:", req.url, "familyId:", familyId);
   
   // Handle GET requests
   if (req.method === "GET") {
