@@ -67,10 +67,7 @@ async function updateFamilyInDb(id: string, updates: any): Promise<any | null> {
       .from("families")
       .select("id, name, address, photo_url");
     
-    if (fetchError || !allFamilies) {
-      console.error("[updateFamilyInDb] Fetch error:", fetchError);
-      return null;
-    }
+    if (fetchError || !allFamilies) return null;
     
     const idLower = id.toLowerCase();
     const matching = allFamilies.find((f: any) => {
@@ -78,30 +75,18 @@ async function updateFamilyInDb(id: string, updates: any): Promise<any | null> {
       return nameLower.startsWith(idLower) || nameLower.includes(idLower);
     });
     
-    if (!matching) {
-      console.error("[updateFamilyInDb] No matching family for:", id);
-      return null;
-    }
-    
-    console.log("[updateFamilyInDb] Found family:", matching.name, "id:", matching.id);
+    if (!matching) return null;
     
     let extra: any = {};
     if (matching.address) {
       try { extra = JSON.parse(matching.address); } catch {}
     }
-    console.log("[updateFamilyInDb] Current extra:", extra);
     
     // Apply updates
-    if (updates.name !== undefined) {
-      // For name change, we need to update the name field
-    }
     if (updates.adults !== undefined) extra.adults = updates.adults;
     if (updates.children !== undefined) extra.children = updates.children;
     if (updates.pin !== undefined) extra.pin = updates.pin;
     if (updates.photoUrl !== undefined) extra.photoUrl = updates.photoUrl;
-    
-    console.log("[updateFamilyInDb] Updated extra:", extra);
-    console.log("[updateFamilyInDb] JSON:", JSON.stringify(extra));
     
     const { data, error } = await supabase
       .from("families")
@@ -115,14 +100,13 @@ async function updateFamilyInDb(id: string, updates: any): Promise<any | null> {
       .single();
     
     if (error) {
-      console.error("[updateFamilyInDb] Update error:", error);
+      console.error("Update error:", error);
       return null;
     }
     
-    console.log("[updateFamilyInDb] Updated data:", data);
     return rowToFamily(data);
   } catch (err) {
-    console.error("[updateFamilyInDb] Update failed:", err);
+    console.error("Update failed:", err);
     return null;
   }
 }
@@ -189,23 +173,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     // Get current family from Supabase
     const family = await findFamilyById(id);
-    console.log("[change-pin] Found family:", family ? family.name : "not found", "PIN:", family?.pin);
-    console.log("[change-pin] Input currentPin:", currentPin);
     
     if (!family) {
       return res.status(404).json({ error: "Family not found" });
     }
     
     if (family.pin !== currentPin) {
-      console.log("[change-pin] PIN mismatch!");
       return res.status(401).json({ error: "Current PIN incorrect" });
     }
     
-    console.log("[change-pin] PIN match! Updating to:", newPin);
-    
     // Update PIN
     const updated = await updateFamilyInDb(id, { pin: newPin });
-    console.log("[change-pin] Update result:", updated ? "success" : "failed");
     if (updated) {
       return res.json({ success: true, family: updated, source: "supabase" });
     }
