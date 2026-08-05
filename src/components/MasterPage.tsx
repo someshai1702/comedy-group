@@ -95,11 +95,13 @@ export default function MasterPage({
     };
 
     try {
-      const url = editingFamily ? `/api/families/${editingFamily.id}` : "/api/families";
-      const method = editingFamily ? "PUT" : "POST";
+      // Use query parameter for single family update
+      const url = editingFamily 
+        ? `/api/families?id=${encodeURIComponent(editingFamily.id)}` 
+        : "/api/families";
 
       const res = await fetch(url, {
-        method,
+        method: editingFamily ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
@@ -134,7 +136,9 @@ export default function MasterPage({
     setSuccess("");
 
     try {
-      const res = await fetch(`/api/families/${id}`, {
+      // Note: Delete functionality requires a separate DELETE endpoint
+      // For now, we'll use PUT to update a "deleted" flag or skip delete
+      const res = await fetch(`/api/families?id=${encodeURIComponent(id)}`, {
         method: "DELETE"
       });
       const data = await res.json();

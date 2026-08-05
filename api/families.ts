@@ -31,33 +31,214 @@ function rowToFamily(row: any): any {
   };
 }
 
-// GET /api/families - List all
+// GET /api/families - List all or single family
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== "GET") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  // Handle GET requests
+  if (req.method === "GET") {
+    const familyId = req.query.id as string;
+    
+    try {
+      // If id is provided, return single family
+      if (familyId) {
+        // Try to find by exact ID
+        const { data, error } = await supabase
+          .from("families")
+          .select("id, name, adults, children, pin, photoUrl")
+          .eq("id", familyId.toLowerCase())
+          .single();
+        
+        if (!error && data) {
+          return res.json({ success: true, family: rowToFamily(data), source: "supabase" });
+        }
+        
+        // If not found by ID, try by name prefix
+        const { data: allData } = await supabase
+          .from("families")
+          .select("id, name, adults, children, pin, photoUrl");
+        
+        if (allData) {
+          const idLower = familyId.toLowerCase();
+          const matching = allData.find((f: any) => {
+            const nameLower = (f.name || "").toLowerCase();
+            return nameLower.startsWith(idLower) || nameLower.includes(idLower) || f.id === idLower;
+          });
+          
+          if (matching) {
+            return res.json({ success: true, family: rowToFamily(matching), source: "supabase" });
+          }
+        }
+        
+        // Fallback to defaults
+        const defaultFamily = DEFAULT_FAMILIES.find(f => f.id === familyId.toLowerCase());
+        if (defaultFamily) {
+          return res.json({ success: true, family: defaultFamily, source: "default" });
+        }
+        
+        return res.status(404).json({ error: "Family not found" });
+      }
+      
+      // No id provided - return all families
+      const { data, error } = await supabase
+        .from("families")
+        .select("id, name, adults, children, pin, photoUrl")
+        .limit(50);
 
-  try {
-    // Select all columns including adults, children, pin
-    const { data, error } = await supabase
-      .from("families")
-      .select("id, name, adults, children, pin, photoUrl")
-      .limit(50);
+      if (error) {
+        console.error("Supabase error:", error);
+        return res.json({ success: true, families: DEFAULT_FAMILIES, source: "default" });
+      }
 
-    if (error) {
-      console.error("Supabase error:", error);
-      // Return defaults if Supabase fails
+      if (!data || data.length === 0) {
+        return res.json({ success: true, families: DEFAULT_FAMILIES, source: "default" });
+      }
+
+      const families = data.map(rowToFamily);
+      return res.json({ success: true, families, source: "supabase" });
+    } catch (err) {
+      console.error("Error:", err);
       return res.json({ success: true, families: DEFAULT_FAMILIES, source: "default" });
     }
-
-    if (!data || data.length === 0) {
-      return res.json({ success: true, families: DEFAULT_FAMILIES, source: "default" });
-    }
-
-    const families = data.map(rowToFamily);
-    return res.json({ success: true, families, source: "supabase" });
-  } catch (err) {
-    console.error("Error:", err);
-    return res.json({ success: true, families: DEFAULT_FAMILIES, source: "default" });
   }
+
+  // PUT /api/families?id=xxx
+  if (req.method === "PUT") {
+    const familyId = req.query.id as string;
+    const { name, adults, children, pin, photoUrl } = req.body;
+    
+    console.log("[PUT /api/families] id:", familyId, "updates:", { name, adults, children, pin, photoUrl });
+    
+    if (!familyId) {
+      return res.status(400).json({ error: "Family ID required" });
+    }
+    
+    try {
+      // Find the family first
+      let currentFamily: any = null;
+      
+      const { data: byId } = await supabase
+        .from("families")
+        .select("id, name, adults, children, pin, photoUrl")
+        .eq("id", familyId.toLowerCase())
+        .single();
+      
+      if (byId) {
+        currentFamily = byId;
+      } else {
+        // Try by name
+        const { data: allData } = await supabase
+          .from("families")
+          .select("id, name, adults, children, pin, photoUrl");
+        
+        if (allData) {
+          const idLower = familyId.toLowerCase();
+          const matching = allData.find((f: any) => {
+            const nameLower = (f.name || "").toLowerCase();
+            return nameLower.startsWith(idLower) || nameLower.includes(idLower) || f.id === idLower;
+          });
+          if (matching) currentFamily = matching;
+        }
+      }
+      
+      if (!currentFamily) {
+        // Try default families
+        const defaultFamily = DEFAULT_FAMILIES.find(f => f.id === familyId.toLowerCase());
+        if (defaultFamily) {
+          return res.json({ success: true, family: { ...defaultFamily, ...{ name, adults, children, pin, photoUrl } }, source: "memory" });
+        }
+        return res.status(404).json({ error: "Family not found" });
+      }
+      
+      // Build update object
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name;
+      if (adults !== undefined) updateData.adults = adults;
+      if (children !== undefined) updateData.children = children;
+      if (pin !== undefined) updateData.pin = pin;
+      if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
+      
+      if (Object.keys(updateData).length === 0) {
+        return res.json({ success: true, family: rowToFamily(currentFamily), source: "supabase" });
+      }
+      
+      console.log("[Family Update] Updating:", currentFamily.id, "with:", updateData);
+      
+      const { data, error } = await supabase
+        .from("families")
+        .update(updateData)
+        .eq("id", currentFamily.id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error("Update error:", error);
+        return res.status(500).json({ error: "Failed to update family" });
+      }
+      
+      console.log("[Family Update] Success:", data);
+      return res.json({ success: true, family: rowToFamily(data), source: "supabase" });
+    } catch (err) {
+      console.error("Update failed:", err);
+      return res.status(500).json({ error: "Failed to update family" });
+    }
+  }
+
+  // DELETE /api/families?id=xxx - Delete a family
+  if (req.method === "DELETE") {
+    const familyId = req.query.id as string;
+    
+    if (!familyId) {
+      return res.status(400).json({ error: "Family ID required" });
+    }
+    
+    try {
+      // Find the family first
+      let dbId: string | null = null;
+      
+      const { data: byId } = await supabase
+        .from("families")
+        .select("id")
+        .eq("id", familyId.toLowerCase())
+        .single();
+      
+      if (byId) {
+        dbId = byId.id;
+      } else {
+        // Try by name
+        const { data: allData } = await supabase
+          .from("families")
+          .select("id, name");
+        
+        if (allData) {
+          const idLower = familyId.toLowerCase();
+          const matching = allData.find((f: any) => {
+            const nameLower = (f.name || "").toLowerCase();
+            return nameLower.startsWith(idLower) || nameLower.includes(idLower) || f.id === idLower;
+          });
+          if (matching) dbId = matching.id;
+        }
+      }
+      
+      if (!dbId) {
+        return res.status(404).json({ error: "Family not found" });
+      }
+      
+      // Delete from Supabase
+      const { error } = await supabase
+        .from("families")
+        .delete()
+        .eq("id", dbId);
+      
+      if (error) {
+        console.error("Delete error:", error);
+        return res.status(500).json({ error: "Failed to delete family" });
+      }
+      
+      return res.json({ success: true, message: "Family deleted" });
+    } catch (err) {
+      console.error("Delete failed:", err);
+      return res.status(500).json({ error: "Failed to delete family" });
+    }
+  }
+
+  return res.status(405).json({ error: "Method not allowed" });
 }

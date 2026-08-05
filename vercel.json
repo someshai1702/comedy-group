@@ -2,18 +2,8 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/master", "dest": "/index.html" },
-    { "src": "/sw.js", "dest": "/sw.js" },
-    { "src": "/firebase-messaging-sw.js", "dest": "/firebase-messaging-sw.js" },
-    { "src": "/manifest.json", "dest": "/manifest.json" },
-    { "src": "/comedy_group.png", "dest": "/comedy_group.png" },
-    { "src": "/favicon-16.png", "dest": "/favicon-16.png" },
-    { "src": "/favicon-32.png", "dest": "/favicon-32.png" },
-    { "src": "/favicon-192.png", "dest": "/favicon-192.png" },
-    { "src": "/favicon-48.png", "dest": "/favicon-48.png" },
-    { "src": "/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
