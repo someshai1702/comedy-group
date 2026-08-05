@@ -114,6 +114,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "POST") {
     const { id, name, adults, children, pin, photoUrl } = req.body || {};
     
+    console.log("[POST /api/families] received - id:", id, "name:", name, "adults:", adults, "children:", children);
+    
     // If id is provided, update existing family
     if (id) {
       const familyId = typeof id === 'string' ? id : String(id);
@@ -121,31 +123,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Find the family first
       let currentFamily: any = null;
       
-      const { data: byId } = await supabase
-        .from("families")
-        .select("id, name, adults, children, pin, photoUrl")
-        .eq("id", familyId.toLowerCase())
-        .single();
+      console.log("[POST /api/families] Looking for family with id:", familyId);
       
-      if (byId) {
-        currentFamily = byId;
-      } else {
-        // Try by name
-        const { data: allData } = await supabase
-          .from("families")
-          .select("id, name, adults, children, pin, photoUrl");
-        
-        if (allData) {
-          const idLower = familyId.toLowerCase();
-          const matching = allData.find((f: any) => {
-            const nameLower = (f.name || "").toLowerCase();
-            return nameLower.startsWith(idLower) || nameLower.includes(idLower) || f.id === idLower;
-          });
-          if (matching) currentFamily = matching;
-        }
+      // Try finding by short name first (like "sharma")
+      const { data: allData } = await supabase
+        .from("families")
+        .select("id, name, adults, children, pin, photoUrl");
+      
+      console.log("[POST /api/families] All families from DB:", allData?.map((f: any) => ({id: f.id, name: f.name})));
+      
+      if (allData) {
+        const idLower = familyId.toLowerCase();
+        const matching = allData.find((f: any) => {
+          const nameLower = (f.name || "").toLowerCase();
+          return nameLower.startsWith(idLower) || nameLower.includes(idLower) || f.id === idLower || f.id?.toLowerCase() === idLower;
+        });
+        console.log("[POST /api/families] Matched family:", matching?.id, matching?.name);
+        if (matching) currentFamily = matching;
       }
       
       if (!currentFamily) {
+        console.log("[POST /api/families] No match found for:", familyId);
         return res.status(404).json({ error: "Family not found" });
       }
       
