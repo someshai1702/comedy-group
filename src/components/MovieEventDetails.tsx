@@ -26,6 +26,15 @@ export default function MovieEventDetails({
   const isAdmin = currentFamily.id === "admin" || currentFamily.id === "ee5a209b-0d3e-4a96-81ee-1b232d582983";
   const canDelete = isHost || isAdmin;
   
+  console.log("MovieEventDetails debug:", {
+    currentFamilyId: currentFamily.id,
+    eventHostFamilyId: event.hostFamilyId,
+    isHost,
+    isAdmin,
+    canDelete,
+    hasOnDeleteEvent: !!onDeleteEvent
+  });
+  
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
