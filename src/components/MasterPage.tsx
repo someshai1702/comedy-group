@@ -89,13 +89,6 @@ export default function MasterPage({
 
     const adultsArray = famAdults.split(",").map(a => a.trim()).filter(Boolean);
     const childrenArray = famChildren.split(",").map(c => c.trim()).filter(Boolean);
-    
-    console.log("[MasterPage] Saving family:", { 
-      id: editingFamily?.id, 
-      name: famName, 
-      adults: adultsArray, 
-      children: childrenArray 
-    });
 
     const payload = {
       id: editingFamily?.id,
