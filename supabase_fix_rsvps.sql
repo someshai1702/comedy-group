@@ -5,6 +5,7 @@
 DROP TABLE IF EXISTS rsvps;
 
 -- Create the rsvps table with proper schema
+-- Note: "order" is a SQL keyword, so we use "food_order" instead
 CREATE TABLE rsvps (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   event_id UUID NOT NULL,
@@ -13,7 +14,7 @@ CREATE TABLE rsvps (
   reason TEXT DEFAULT '',
   adults_attending_count INTEGER DEFAULT 0,
   children_attending_count INTEGER DEFAULT 0,
-  order JSONB DEFAULT '{}',
+  food_order JSONB DEFAULT '{}',
   special_instructions TEXT DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),

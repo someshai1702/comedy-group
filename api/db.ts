@@ -125,7 +125,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         reason: row.reason || "",
         adultsAttendingCount: row.adults_attending_count || 0,
         childrenAttendingCount: row.children_attending_count || 0,
-        order: row.order || {},
+        order: row.food_order || {},
         specialInstructions: row.special_instructions || "",
         updatedAt: row.updated_at
       }));

@@ -26,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           reason: row.reason || "",
           adultsAttendingCount: row.adults_attending_count || 0,
           childrenAttendingCount: row.children_attending_count || 0,
-          order: row.order || {},
+          order: row.food_order || {},
           specialInstructions: row.special_instructions || "",
           updatedAt: row.updated_at
         }));
@@ -102,7 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         reason: rsvpData.reason,
         adults_attending_count: rsvpData.adultsAttendingCount,
         children_attending_count: rsvpData.childrenAttendingCount,
-        order: rsvpData.order,
+        food_order: rsvpData.order,
         special_instructions: rsvpData.specialInstructions,
         updated_at: rsvpData.updatedAt
       };
@@ -112,10 +112,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       if (upsertError) {
         console.error("Supabase upsert error:", upsertError);
-        // Fall back to cache only
       }
     } catch (supabaseError) {
-      console.error("Supabase RSVP error (continuing with cache):", supabaseError);
+      console.error("Supabase RSVP error:", supabaseError);
     }
 
     return res.json({ success: true, rsvp: rsvpData, _source: "cache" });
