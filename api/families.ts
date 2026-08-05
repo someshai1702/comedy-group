@@ -33,20 +33,21 @@ function rowToFamily(row: any): any {
 
 // GET /api/families - List all or single family
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Parse query from URL if not in req.query
+  // Try multiple ways to get the family ID
   let familyId = req.query.id as string;
-  if (!familyId && req.url) {
-    const urlParts = req.url.split('?');
-    if (urlParts.length > 1) {
-      const params = new URLSearchParams(urlParts[1]);
-      familyId = params.get('id') || undefined;
+  
+  // If no query param, try parsing from URL
+  if (!familyId && typeof req.url === 'string') {
+    const match = req.url.match(/[?&]id=([^&]+)/);
+    if (match) {
+      familyId = decodeURIComponent(match[1]);
     }
   }
   
-  console.log("[API /api/families] Method:", req.method, "req.query:", req.query, "req.url:", req.url, "familyId:", familyId);
+  console.log("[API /api/families] Method:", req.method, "familyId from query:", req.query.id, "familyId from url:", familyId);
   
   // Handle GET requests
-  if (req.method === "GET") {
+  if (req.method === "GET" || !req.method) {
     
     try {
       // If id is provided, return single family
@@ -111,18 +112,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // PUT /api/families?id=xxx
-  if (req.method === "PUT") {
-    // Parse familyId from query
+  // PUT /api/families - Update family (id in query or body)
+  if (req.method === "PUT" || req.method === "POST") {
+    // Parse familyId from query or body
     let familyId = req.query.id as string;
-    if (!familyId && req.url) {
-      const urlParts = req.url.split('?');
-      if (urlParts.length > 1) {
-        const params = new URLSearchParams(urlParts[1]);
-        familyId = params.get('id') || undefined;
+    if (!familyId && typeof req.url === 'string') {
+      const match = req.url.match(/[?&]id=([^&]+)/);
+      if (match) {
+        familyId = decodeURIComponent(match[1]);
       }
     }
-    const { name, adults, children, pin, photoUrl } = req.body;
+    
+    const { name, adults, children, pin, photoUrl } = req.body || {};
     
     console.log("[PUT /api/families] id:", familyId, "updates:", { name, adults, children, pin, photoUrl });
     
@@ -205,11 +206,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "DELETE") {
     // Parse familyId from query
     let familyId = req.query.id as string;
-    if (!familyId && req.url) {
-      const urlParts = req.url.split('?');
-      if (urlParts.length > 1) {
-        const params = new URLSearchParams(urlParts[1]);
-        familyId = params.get('id') || undefined;
+    if (!familyId && typeof req.url === 'string') {
+      const match = req.url.match(/[?&]id=([^&]+)/);
+      if (match) {
+        familyId = decodeURIComponent(match[1]);
       }
     }
     
