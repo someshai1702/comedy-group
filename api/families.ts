@@ -112,26 +112,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // PUT /api/families - Update family (id in query or body)
-  if (req.method === "PUT" || req.method === "POST") {
-    // Parse familyId from query or body
-    let familyId = req.query.id as string;
-    if (!familyId && typeof req.url === 'string') {
-      const match = req.url.match(/[?&]id=([^&]+)/);
-      if (match) {
-        familyId = decodeURIComponent(match[1]);
-      }
-    }
+  // POST /api/families - Create or update family (id in body)
+  if (req.method === "POST") {
+    const { id, name, adults, children, pin, photoUrl } = req.body || {};
     
-    const { name, adults, children, pin, photoUrl } = req.body || {};
+    console.log("[POST /api/families] id:", id, "name:", name);
     
-    console.log("[PUT /api/families] id:", familyId, "updates:", { name, adults, children, pin, photoUrl });
-    
-    if (!familyId) {
-      return res.status(400).json({ error: "Family ID required" });
-    }
-    
-    try {
+    // If id is provided, update existing family
+    if (id) {
+      const familyId = typeof id === 'string' ? id : String(id);
+      
       // Find the family first
       let currentFamily: any = null;
       
@@ -160,11 +150,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       
       if (!currentFamily) {
-        // Try default families
-        const defaultFamily = DEFAULT_FAMILIES.find(f => f.id === familyId.toLowerCase());
-        if (defaultFamily) {
-          return res.json({ success: true, family: { ...defaultFamily, ...{ name, adults, children, pin, photoUrl } }, source: "memory" });
-        }
         return res.status(404).json({ error: "Family not found" });
       }
       
@@ -176,11 +161,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (pin !== undefined) updateData.pin = pin;
       if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
       
-      if (Object.keys(updateData).length === 0) {
-        return res.json({ success: true, family: rowToFamily(currentFamily), source: "supabase" });
-      }
-      
-      console.log("[Family Update] Updating:", currentFamily.id, "with:", updateData);
+      console.log("[POST Update] Updating:", currentFamily.id, "with:", updateData);
       
       const { data, error } = await supabase
         .from("families")
@@ -194,15 +175,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ error: "Failed to update family" });
       }
       
-      console.log("[Family Update] Success:", data);
+      console.log("[POST Update] Success:", data);
       return res.json({ success: true, family: rowToFamily(data), source: "supabase" });
-    } catch (err) {
-      console.error("Update failed:", err);
-      return res.status(500).json({ error: "Failed to update family" });
     }
+    
+    // No id provided - return error (creation not implemented)
+    return res.status(400).json({ error: "Family ID required for update" });
   }
 
-  // DELETE /api/families?id=xxx - Delete a family
+  // DELETE /api/families - Delete a family (id in query param)
   if (req.method === "DELETE") {
     // Parse familyId from query
     let familyId = req.query.id as string;

@@ -88,6 +88,7 @@ export default function MasterPage({
     setSuccess("");
 
     const payload = {
+      id: editingFamily?.id,
       name: famName,
       pin: famPin,
       adults: famAdults.split(",").map(a => a.trim()).filter(Boolean),
@@ -95,13 +96,9 @@ export default function MasterPage({
     };
 
     try {
-      // Use query parameter for single family update
-      const url = editingFamily 
-        ? `/api/families?id=${encodeURIComponent(editingFamily.id)}` 
-        : "/api/families";
-
-      const res = await fetch(url, {
-        method: editingFamily ? "PUT" : "POST",
+      // Always use POST to /api/families, with id in body
+      const res = await fetch("/api/families", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
