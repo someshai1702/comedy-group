@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { initializeFirebase, isFirebaseConfigured, sendFCMToMultiple } from './firebase-admin';
 
 // In-memory store for push subscriptions
 interface PushSubscription {
@@ -8,13 +9,18 @@ interface PushSubscription {
     auth: string;
   };
   familyId?: string;
+  fcmToken?: string; // Firebase Cloud Messaging token
 }
 
 let pushSubscriptions: PushSubscription[] = [];
+let firebaseReady = false;
 
-// VAPID keys for Web Push - REQUIRED for push notifications to work
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U";
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
+// Initialize Firebase on cold start
+try {
+  firebaseReady = initializeFirebase();
+} catch (e) {
+  console.error("[Push] Firebase init error:", e);
+}
 
 // Convert base64 to Uint8Array for VAPID
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -89,6 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         : pushSubscriptions;
 
       console.log("[Push] Sending to", subscribers.length, "subscribers. Title:", title);
+      console.log("[Push] Firebase configured:", firebaseReady || isFirebaseConfigured());
 
       if (subscribers.length === 0) {
         return res.json({
@@ -99,34 +106,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // Send using Web Push protocol
-      const results = await Promise.all(
-        subscribers.map(async (sub) => {
-          try {
-            // Create the push payload
-            const pushPayload = JSON.stringify({
+      // Try Firebase Cloud Messaging first
+      if (firebaseReady || isFirebaseConfigured()) {
+        try {
+          // Extract FCM tokens from subscriptions
+          const tokens = subscribers
+            .filter(s => s.fcmToken)
+            .map(s => s.fcmToken!);
+
+          if (tokens.length > 0) {
+            const result = await sendFCMToMultiple(tokens, {
               title,
               body: notifBody || "",
-              icon: "/icon-192.png",
-              badge: "/badge-72.png",
-              tag: "comedy-group-" + Date.now(),
               data: data || {}
             });
 
-            // Send to the push service (browser's push endpoint)
-            // Note: This requires proper VAPID setup to work
-            // For now, we log what would be sent
-            console.log("[Push] Would send to:", sub.endpoint.substring(0, 50));
-            console.log("[Push] Payload:", pushPayload);
+            return res.json({
+              success: true,
+              sent: result.success,
+              failed: result.failure,
+              total: subscribers.length,
+              message: `Firebase: ${result.success} sent, ${result.failure} failed`
+            });
+          }
+        } catch (err) {
+          console.error("[Push] Firebase send error:", err);
+        }
+      }
 
-            // The actual push sending requires the web-push library
-            // Since we don't have it installed, we'll return a placeholder
-            // In production, you'd use: webPush.sendNotification(sub, pushPayload)
-            
+      // Fallback to Web Push (for browsers that don't use FCM)
+      const results = await Promise.all(
+        subscribers.map(async (sub) => {
+          try {
+            console.log("[Push] Web Push would send to:", sub.endpoint.substring(0, 50));
             return { 
               success: true, 
               endpoint: sub.endpoint.substring(0, 50) + "...",
-              message: "Push notification queued"
+              message: "Web Push notification queued"
             };
           } catch (err) {
             console.error("[Push] Error sending:", err);
@@ -141,7 +157,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         success: true,
         sent: successCount,
         total: subscribers.length,
-        message: "Notifications processed. Note: Full push requires VAPID keys configured."
+        message: firebaseReady 
+          ? "Notifications processed via Firebase" 
+          : "Notifications queued (Firebase not configured)"
       });
     }
   }

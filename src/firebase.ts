@@ -1,0 +1,111 @@
+// Firebase configuration for frontend
+// These values should be set as environment variables in Vercel
+
+// Using compat imports for better compatibility
+import { initializeApp, getApps, FirebaseApp } from 'firebase/compat/app';
+import { getMessaging, Messaging, getToken, onMessage } from 'firebase/compat/messaging';
+
+// Firebase configuration - set these in Vercel Environment Variables
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+};
+
+// Initialize Firebase only once
+let app: FirebaseApp | null = null;
+let messaging: Messaging | null = null;
+
+export function isFirebaseConfigured(): boolean {
+  return !!(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.messagingSenderId);
+}
+
+export function getFirebaseApp(): FirebaseApp | null {
+  if (!isFirebaseConfigured()) {
+    console.warn("[Firebase] Not configured. Set VITE_FIREBASE_* environment variables.");
+    return null;
+  }
+
+  if (!app) {
+    app = getApps().length === 0 
+      ? initializeApp(firebaseConfig)
+      : getApps()[0];
+  }
+  return app;
+}
+
+export function getFirebaseMessaging(): Messaging | null {
+  if (!isFirebaseConfigured()) {
+    return null;
+  }
+
+  const firebaseApp = getFirebaseApp();
+  if (!firebaseApp) {
+    return null;
+  }
+
+  if (!messaging) {
+    try {
+      messaging = getMessaging(firebaseApp);
+    } catch (error) {
+      console.error("[Firebase] Failed to get messaging:", error);
+      return null;
+    }
+  }
+  return messaging;
+}
+
+// Request FCM token
+export async function requestFCMToken(): Promise<string | null> {
+  const mess = getFirebaseMessaging();
+  if (!mess) {
+    console.warn("[Firebase] Messaging not available");
+    return null;
+  }
+
+  try {
+    // Check if service workers are supported
+    if (!('serviceWorker' in navigator)) {
+      console.warn("[Firebase] Service workers not supported");
+      return null;
+    }
+
+    // Get existing token or request new one
+    const token = await getToken(mess, {
+      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY || "",
+    });
+
+    if (token) {
+      console.log("[Firebase] FCM Token obtained:", token.substring(0, 20) + "...");
+      return token;
+    } else {
+      console.log("[Firebase] No registration token available");
+      return null;
+    }
+  } catch (error) {
+    console.error("[Firebase] Error getting token:", error);
+    return null;
+  }
+}
+
+// Listen for foreground messages
+export function onForegroundMessage(callback: (payload: any) => void): (() => void) | null {
+  const mess = getFirebaseMessaging();
+  if (!mess) {
+    return null;
+  }
+
+  try {
+    const unsubscribe = onMessage(mess, (payload) => {
+      console.log("[Firebase] Foreground message received:", payload);
+      callback(payload);
+    });
+    return unsubscribe;
+  } catch (error) {
+    console.error("[Firebase] Error setting up foreground listener:", error);
+    return null;
+  }
+}

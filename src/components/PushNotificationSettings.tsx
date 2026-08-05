@@ -1,31 +1,44 @@
 import { useState, useEffect } from "react";
+import { isFirebaseConfigured, requestFCMToken, onForegroundMessage } from "../firebase";
 
 interface PushNotificationSettingsProps {
   familyId?: string;
 }
 
 export default function PushNotificationSettings({ familyId }: PushNotificationSettingsProps) {
-  // Default to enabled - will be corrected after checking browser permission
-  const [permission, setPermission] = useState<NotificationPermission>("granted");
-  const [subscribed, setSubscribed] = useState(true); // Default to enabled
+  const [permission, setPermission] = useState<NotificationPermission>("default");
+  const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [firebaseAvailable, setFirebaseAvailable] = useState(false);
+  const [fcmToken, setFcmToken] = useState<string | null>(null);
 
   // Check current permission and subscription status on mount
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
       const browserPerm = Notification.permission;
       setPermission(browserPerm);
+      setFirebaseAvailable(isFirebaseConfigured());
 
-      // If browser permission is denied, show correct state
       if (browserPerm === "denied") {
         setSubscribed(false);
         return;
       }
 
-      // Check if already subscribed
       checkSubscription();
     }
+
+    // Listen for foreground messages
+    const unsubscribe = onForegroundMessage((payload) => {
+      console.log("[PushSettings] Foreground message:", payload);
+      setMessage({ type: "success", text: `New notification: ${payload.notification?.title}` });
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
   }, [familyId]);
 
   const checkSubscription = async () => {
@@ -48,20 +61,71 @@ export default function PushNotificationSettings({ familyId }: PushNotificationS
     setMessage(null);
 
     try {
-      // Request permission
+      // Request browser permission
       const perm = await Notification.requestPermission();
       setPermission(perm);
 
       if (perm === "granted") {
-        // Register service worker
+        // Try Firebase first if configured
+        if (firebaseAvailable && isFirebaseConfigured()) {
+          try {
+            const token = await requestFCMToken();
+            if (token) {
+              setFcmToken(token);
+              
+              // Register service worker and send to backend
+              if ("serviceWorker" in navigator) {
+                const registration = await navigator.serviceWorker.ready;
+                
+                // Send Firebase config to service worker
+                const firebaseConfig = {
+                  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+                  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+                  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+                  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+                  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+                  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+                };
+                
+                // Get the firebase-messaging-sw registration and send config
+                const swReg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+                swReg.active?.postMessage({
+                  type: "FIREBASE_CONFIG",
+                  config: firebaseConfig
+                });
+
+                // Send FCM token to backend
+                const res = await fetch("/api/push", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    action: "subscribe",
+                    subscription: { endpoint: token, fcmToken: token },
+                    familyId
+                  })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                  setSubscribed(true);
+                  setMessage({ type: "success", text: "Firebase push notifications enabled!" });
+                  return;
+                }
+              }
+            }
+          } catch (fcmError) {
+            console.error("[PushSettings] Firebase error:", fcmError);
+          }
+        }
+
+        // Fallback to Web Push API
         if ("serviceWorker" in navigator) {
           const registration = await navigator.serviceWorker.ready;
 
-          // Subscribe to push (using Web Push API)
           const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(
-              "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U"
+              import.meta.env.VITE_FIREBASE_VAPID_KEY || "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U"
             )
           });
 
@@ -101,24 +165,27 @@ export default function PushNotificationSettings({ familyId }: PushNotificationS
 
     try {
       // Get current subscription
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      if ("serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
 
-      if (subscription) {
-        await subscription.unsubscribe();
-
-        // Notify backend
-        await fetch("/api/push", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "unsubscribe",
-            endpoint: subscription.endpoint
-          })
-        });
+        if (subscription) {
+          await subscription.unsubscribe();
+        }
       }
 
+      // Notify backend
+      await fetch("/api/push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "unsubscribe",
+          endpoint: fcmToken || "unknown"
+        })
+      });
+
       setSubscribed(false);
+      setFcmToken(null);
       setMessage({ type: "success", text: "Push notifications disabled" });
     } catch (err) {
       console.error("Disable notifications error:", err);
@@ -169,9 +236,11 @@ export default function PushNotificationSettings({ familyId }: PushNotificationS
           <h4 className="font-medium text-gray-900">Push Notifications</h4>
           <p className="text-sm text-gray-500">
             {permission === "granted" && subscribed
-              ? "Receiving event notifications"
+              ? firebaseAvailable ? "Firebase push enabled" : "Web push enabled"
               : permission === "denied"
               ? "Notifications blocked by browser"
+              : firebaseAvailable
+              ? "Enable Firebase push notifications"
               : "Get notified when events are created"}
           </p>
         </div>
@@ -203,6 +272,12 @@ export default function PushNotificationSettings({ familyId }: PushNotificationS
         <div className={`mt-3 text-sm ${message.type === "success" ? "text-green-600" : "text-red-600"}`}>
           {message.text}
         </div>
+      )}
+      
+      {!firebaseAvailable && (
+        <p className="mt-2 text-xs text-gray-400">
+          Firebase not configured. Push will use Web Push API.
+        </p>
       )}
     </div>
   );
