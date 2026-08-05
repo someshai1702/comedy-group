@@ -105,12 +105,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (method === "GET") {
     // Try Supabase first
     try {
-      const { data, error, status } = await supabase
+      const { data, error } = await supabase
         .from("events")
         .select("*")
         .order("created_at", { ascending: false });
-
-      console.log("[events API] Supabase response:", { error, status, dataLength: data?.length });
 
       if (!error && data && data.length > 0) {
         const events = data.map(rowToEvent);
