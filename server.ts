@@ -314,25 +314,48 @@ app.get("/api/db", async (req, res) => {
   res.json(db);
 });
 
-// Authenticate Family
+// Authenticate Family / Delete Event (workaround for Vercel)
 app.post("/api/login", async (req, res) => {
-  const { familyId, pin } = req.body;
+  const { familyId, pin, action } = req.body;
+  
+  // Handle delete action
+  if (action === "delete-event") {
+    if (!familyId) {
+      return res.status(400).json({ error: "Family ID is required" });
+    }
+    const eventId = req.body.eventId;
+    if (!eventId) {
+      return res.status(400).json({ error: "Event ID is required" });
+    }
+    const db = await readDatabase();
+    const eventIndex = db.events.findIndex((e: any) => e.id === eventId);
+    if (eventIndex === -1) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+    const event = db.events[eventIndex];
+    if (familyId !== "admin" && event.hostFamilyId !== familyId) {
+      return res.status(403).json({ error: "You do not have permission to delete this event" });
+    }
+    db.events.splice(eventIndex, 1);
+    db.rsvps = db.rsvps.filter((r: any) => r.eventId !== eventId);
+    db.notifications = db.notifications.filter((n: any) => n.eventId !== eventId);
+    await writeDatabase(db);
+    return res.json({ success: true });
+  }
+  
+  // Regular login
   if (!familyId || !pin) {
     return res.status(400).json({ error: "Family ID and PIN are required" });
   }
-
   const db = await readDatabase();
   const family = db.families.find((f: any) => f.id === familyId);
-
   if (!family) {
     return res.status(404).json({ error: "Family not found in the Comedy Group" });
   }
-
   if (family.pin !== pin) {
     return res.status(401).json({ error: "Incorrect 4-digit PIN" });
   }
-
-  res.json({ success: true, family });
+  res.json({ success: true, family, _serverVersion: "2.0" });
 });
 
 // Debug endpoint to check db.json contents
