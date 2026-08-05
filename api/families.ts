@@ -115,8 +115,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "POST") {
     const { id, name, adults, children, pin, photoUrl } = req.body || {};
     
-    console.log("[POST /api/families] received - id:", id, "name:", name, "adults:", adults, "children:", children);
-    
     // If id is provided, update existing family
     if (id) {
       const familyId = typeof id === 'string' ? id : String(id);
@@ -124,42 +122,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Find the family first
       let currentFamily: any = null;
       
-      console.log("[POST /api/families] Looking for family with id:", familyId);
-      
-      // Try finding by short name (like "sharma") or UUID
+      // Try finding by short name (like "rupesh") or UUID
       const { data: allData } = await supabase
         .from("families")
         .select("id, name, adults, children, pin, photoUrl");
-      
-      console.log("[POST /api/families] All families from DB:", allData?.map((f: any) => ({id: f.id, name: f.name})));
       
       if (allData) {
         const idLower = familyId.toLowerCase();
         const matching = allData.find((f: any) => {
           // Match by exact UUID
           if (f.id === familyId || f.id?.toLowerCase() === idLower) return true;
-          // Match by name: "Sharma Family" -> "sharma"
+          // Match by name: "Rupesh Sheth & Family" -> "rupesh"
           const namePart = (f.name || "").split(" ")[0].toLowerCase();
           return namePart === idLower;
         });
-        console.log("[POST /api/families] Matched family:", matching?.id, matching?.name);
         if (matching) currentFamily = matching;
       }
       
       if (!currentFamily) {
-        console.log("[POST /api/families] No match found for:", familyId);
         return res.status(404).json({ error: "Family not found" });
       }
       
-      // Build update object - include ALL fields even if they're empty
+      // Build update object - include ALL fields
       const updateData: any = {};
       updateData.name = name;
       updateData.adults = adults;
       updateData.children = children;
       if (pin !== undefined) updateData.pin = pin;
       if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
-      
-      console.log("[POST /api/families] Updating family:", currentFamily.id, "with:", updateData);
       
       const { data, error } = await supabase
         .from("families")
