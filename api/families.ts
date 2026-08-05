@@ -44,8 +44,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
   
-  console.log("[API /api/families] Method:", req.method, "familyId from query:", req.query.id, "familyId from url:", familyId);
-  
   // Handle GET requests
   if (req.method === "GET" || !req.method) {
     
@@ -114,10 +112,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // POST /api/families - Create or update family (id in body)
   if (req.method === "POST") {
-    console.log("[POST /api/families] body:", JSON.stringify(req.body), "rawBody:", req);
     const { id, name, adults, children, pin, photoUrl } = req.body || {};
-    
-    console.log("[POST /api/families] parsed - id:", id, "name:", name);
     
     // If id is provided, update existing family
     if (id) {
@@ -162,8 +157,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (pin !== undefined) updateData.pin = pin;
       if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
       
-      console.log("[POST Update] Updating:", currentFamily.id, "with:", updateData);
-      
       const { data, error } = await supabase
         .from("families")
         .update(updateData)
@@ -176,7 +169,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ error: "Failed to update family" });
       }
       
-      console.log("[POST Update] Success:", data);
       return res.json({ success: true, family: rowToFamily(data), source: "supabase" });
     }
     
