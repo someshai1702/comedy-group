@@ -26,11 +26,6 @@ export default function MovieEventDetails({
   const isAdmin = currentFamily.id === "admin" || currentFamily.id === "ee5a209b-0d3e-4a96-81ee-1b232d582983";
   const canDelete = isHost || isAdmin;
   
-  // Debug: alert when component mounts
-  useEffect(() => {
-    alert(`MovieEventDetails: currentFamily.id="${currentFamily.id}", event.hostFamilyId="${event.hostFamilyId}", isHost=${isHost}, isAdmin=${isAdmin}, canDelete=${canDelete}`);
-  }, []);
-  
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -172,6 +167,11 @@ ${event.deadline ? `\n⏳ *RSVP Deadline:* ${dlString}\n` : ""}
           <ChevronLeft size={16} />
           Back to Dashboard
         </button>
+        
+        {/* DEBUG: Show canDelete status */}
+        <div className="text-xs text-gray-400">
+          DEBUG: canDelete={String(canDelete)} (isHost={String(isHost)}, isAdmin={String(isAdmin)}, currentFamily.id={currentFamily.id}, event.hostFamilyId={event.hostFamilyId})
+        </div>
         
         {/* Delete Button - Only for Host or Admin */}
         {canDelete && onDeleteEvent && (
