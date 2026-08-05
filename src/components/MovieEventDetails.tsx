@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Event, Family, RSVP } from "../types";
-import { ChevronLeft, Calendar, Clock, MapPin, Film, Ticket, Users, MessageCircle, Check, AlertCircle, Trash2 } from "lucide-react";
+import { ChevronLeft, Calendar, Clock, MapPin, Film, Ticket, Users, MessageCircle, Check, AlertCircle } from "lucide-react";
 
 interface MovieEventDetailsProps {
   event: Event;
@@ -174,7 +174,7 @@ ${event.deadline ? `\n⏳ *RSVP Deadline:* ${dlString}\n` : ""}
             onClick={() => setShowDeleteConfirm(true)}
             className="flex items-center gap-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors text-sm font-bold"
           >
-            <Trash2 size={16} />
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
             Delete Event
           </button>
         )}
@@ -186,7 +186,7 @@ ${event.deadline ? `\n⏳ *RSVP Deadline:* ${dlString}\n` : ""}
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
             <div className="text-center">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Trash2 size={32} className="text-red-600" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-600"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
               </div>
               <h3 className="text-xl font-black text-gray-900 mb-2">Delete Event?</h3>
               <p className="text-gray-600 mb-6">
