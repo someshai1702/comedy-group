@@ -19,10 +19,11 @@ const DEFAULT_FAMILIES = [
 
 // Convert DB row to family object (matching Supabase schema columns)
 function rowToFamily(row: any): any {
-  // Use simple ID from the id column or derive from name
+  // Derive a short ID from the name (e.g., "Sharma Family" -> "sharma")
   const namePart = row.name ? row.name.split(" ")[0].toLowerCase() : "unknown";
   return {
-    id: row.id || namePart,
+    id: namePart,  // Use derived short ID like "sharma" for consistent lookup
+    uuid: row.id,  // Also store the actual UUID for reference
     name: row.name,
     adults: row.adults || [],
     children: row.children || [],
@@ -125,7 +126,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       console.log("[POST /api/families] Looking for family with id:", familyId);
       
-      // Try finding by short name first (like "sharma")
+      // Try finding by short name (like "sharma") or UUID
       const { data: allData } = await supabase
         .from("families")
         .select("id, name, adults, children, pin, photoUrl");
@@ -135,8 +136,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (allData) {
         const idLower = familyId.toLowerCase();
         const matching = allData.find((f: any) => {
-          const nameLower = (f.name || "").toLowerCase();
-          return nameLower.startsWith(idLower) || nameLower.includes(idLower) || f.id === idLower || f.id?.toLowerCase() === idLower;
+          // Match by exact UUID
+          if (f.id === familyId || f.id?.toLowerCase() === idLower) return true;
+          // Match by name: "Sharma Family" -> "sharma"
+          const namePart = (f.name || "").split(" ")[0].toLowerCase();
+          return namePart === idLower;
         });
         console.log("[POST /api/families] Matched family:", matching?.id, matching?.name);
         if (matching) currentFamily = matching;
@@ -147,13 +151,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ error: "Family not found" });
       }
       
-      // Build update object
+      // Build update object - include ALL fields even if they're empty
       const updateData: any = {};
-      if (name !== undefined) updateData.name = name;
-      if (adults !== undefined) updateData.adults = adults;
-      if (children !== undefined) updateData.children = children;
+      updateData.name = name;
+      updateData.adults = adults;
+      updateData.children = children;
       if (pin !== undefined) updateData.pin = pin;
       if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
+      
+      console.log("[POST /api/families] Updating family:", currentFamily.id, "with:", updateData);
       
       const { data, error } = await supabase
         .from("families")
