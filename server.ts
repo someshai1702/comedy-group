@@ -635,6 +635,38 @@ app.post("/api/delete-event", async (req, res) => {
   res.json({ success: true });
 });
 
+// Alternative delete endpoint with different path
+app.get("/api/events/delete", async (req, res) => {
+  const { eventId, familyId } = req.query as { eventId?: string; familyId?: string };
+  console.log(`[GET /api/events/delete] eventId:`, eventId, "familyId:", familyId);
+
+  if (!familyId) {
+    return res.status(400).json({ error: "Family ID is required" });
+  }
+  if (!eventId) {
+    return res.status(400).json({ error: "Event ID is required" });
+  }
+
+  const db = await readDatabase();
+  const eventIndex = db.events.findIndex((e: any) => e.id === eventId);
+
+  if (eventIndex === -1) {
+    return res.status(404).json({ error: "Event not found" });
+  }
+
+  const event = db.events[eventIndex];
+  if (familyId !== "admin" && event.hostFamilyId !== familyId) {
+    return res.status(403).json({ error: "You do not have permission to delete this event" });
+  }
+
+  db.events.splice(eventIndex, 1);
+  db.rsvps = db.rsvps.filter((r: any) => r.eventId !== eventId);
+  db.notifications = db.notifications.filter((n: any) => n.eventId !== eventId);
+
+  await writeDatabase(db);
+  res.json({ success: true });
+});
+
 // GET version of delete (workaround for Vercel POST issue)
 app.get("/api/delete-event", async (req, res) => {
   const { eventId, familyId } = req.query as { eventId?: string; familyId?: string };
