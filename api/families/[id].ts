@@ -174,19 +174,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if ((req.method === "PUT" || req.method === "PATCH") && req.query?.action === "change-pin") {
     const { currentPin, newPin } = req.body;
     
-    // Get current family
-    const family = await findFamilyById(id) || DEFAULT_FAMILIES[id];
+    // Get current family from Supabase
+    const family = await findFamilyById(id);
+    console.log("[change-pin] Found family:", family ? family.name : "not found", "PIN:", family?.pin);
+    console.log("[change-pin] Input currentPin:", currentPin);
     
     if (!family) {
       return res.status(404).json({ error: "Family not found" });
     }
     
     if (family.pin !== currentPin) {
+      console.log("[change-pin] PIN mismatch!");
       return res.status(401).json({ error: "Current PIN incorrect" });
     }
     
+    console.log("[change-pin] PIN match! Updating to:", newPin);
+    
     // Update PIN
     const updated = await updateFamilyInDb(id, { pin: newPin });
+    console.log("[change-pin] Update result:", updated ? "success" : "failed");
     if (updated) {
       return res.json({ success: true, family: updated, source: "supabase" });
     }
