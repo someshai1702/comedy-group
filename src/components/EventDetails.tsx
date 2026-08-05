@@ -28,6 +28,11 @@ export default function EventDetails({
   const isAdmin = currentFamily.id === "admin" || currentFamily.id === "ee5a209b-0d3e-4a96-81ee-1b232d582983";
   const canDelete = isHost || isAdmin;
   
+  // Debug logging
+  console.log("[EventDetails] currentFamily.id:", currentFamily.id);
+  console.log("[EventDetails] event.hostFamilyId:", event.hostFamilyId);
+  console.log("[EventDetails] isHost:", isHost, "isAdmin:", isAdmin);
+  
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   // --- WhatsApp Sharing ---
