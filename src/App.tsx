@@ -352,6 +352,7 @@ export default function App() {
                 setSelectedEvent(null);
               }}
               onSubmitRsvp={handleRsvpSubmit}
+              onDeleteEvent={handleDeleteEvent}
             />
           ) : (
             <EventDetails

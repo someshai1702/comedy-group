@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Event, Family, RSVP } from "../types";
-import { ChevronLeft, Calendar, Clock, MapPin, Film, Ticket, Users, MessageCircle, Check, AlertCircle } from "lucide-react";
+import { ChevronLeft, Calendar, Clock, MapPin, Film, Ticket, Users, MessageCircle, Check, AlertCircle, Trash2 } from "lucide-react";
 
 interface MovieEventDetailsProps {
   event: Event;
@@ -9,6 +9,7 @@ interface MovieEventDetailsProps {
   rsvps: RSVP[];
   onBack: () => void;
   onSubmitRsvp: (rsvpData: any) => Promise<void>;
+  onDeleteEvent?: (eventId: string) => Promise<void>;
 }
 
 export default function MovieEventDetails({
@@ -17,8 +18,18 @@ export default function MovieEventDetails({
   families,
   rsvps,
   onBack,
-  onSubmitRsvp
+  onSubmitRsvp,
+  onDeleteEvent
 }: MovieEventDetailsProps) {
+  // Check if current user can delete this event (host or admin)
+  const isHost = currentFamily.id === event.hostFamilyId;
+  const isAdmin = currentFamily.id === "admin" || currentFamily.id === "ee5a209b-0d3e-4a96-81ee-1b232d582983";
+  const canDelete = isHost || isAdmin;
+  
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   // Form states
   const [attending, setAttending] = useState<"Yes" | "No" | "Maybe" | "">("");
   const [ticketsCount, setTicketsCount] = useState<number>(1);
@@ -148,13 +159,67 @@ ${event.deadline ? `\n⏳ *RSVP Deadline:* ${dlString}\n` : ""}
   return (
     <div className="max-w-2xl mx-auto px-4 pb-16 space-y-6">
       {/* Navigation */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-gray-500 hover:text-orange-600 transition-colors text-sm font-bold"
-      >
-        <ChevronLeft size={16} />
-        Back to Dashboard
-      </button>
+      <div className="flex items-center justify-between">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-gray-500 hover:text-orange-600 transition-colors text-sm font-bold"
+        >
+          <ChevronLeft size={16} />
+          Back to Dashboard
+        </button>
+        
+        {/* Delete Button - Only for Host or Admin */}
+        {canDelete && onDeleteEvent && (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="flex items-center gap-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors text-sm font-bold"
+          >
+            <Trash2 size={16} />
+            Delete Event
+          </button>
+        )}
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={32} className="text-red-600" />
+              </div>
+              <h3 className="text-xl font-black text-gray-900 mb-2">Delete Event?</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete "{event.movieName || event.name}"? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 py-3 font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!onDeleteEvent) return;
+                    setDeleting(true);
+                    try {
+                      await onDeleteEvent(event.id);
+                    } catch (err) {
+                      console.error("Delete failed:", err);
+                      setDeleting(false);
+                    }
+                  }}
+                  disabled={deleting}
+                  className="flex-1 py-3 font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors disabled:bg-red-300"
+                >
+                  {deleting ? "Deleting..." : "Delete Event"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Locked Event Warning */}
       {isLocked && (
