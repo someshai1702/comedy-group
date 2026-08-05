@@ -1,14 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
-import { getRsvpsCache } from "./shared-cache";
 
 const supabaseUrl = process.env.SUPABASE_URL || "https://tmdsgjheinmjxqthzmvm.supabase.co";
 const supabaseKey = process.env.SUPABASE_KEY || "sb_publishable_yjiwdDGSPLJOO27mhdjU-g_XR-ir5Bg";
 const supabase = createClient(supabaseUrl, supabaseKey);
-
-// In-memory events cache (shared with events API)
-let eventsCache: any[] | null = null;
-let cacheLoaded = false;
 
 // Default events
 const DEFAULT_EVENTS = [
@@ -77,53 +72,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Fetch families and events in parallel
-    const [familiesResult, eventsResult] = await Promise.all([
+    // Fetch families, events, and RSVPs in parallel
+    const [familiesResult, eventsResult, rsvpsResult] = await Promise.all([
       supabase.from("families").select("id, name, photo_url, address"),
-      supabase.from("events").select("*").order("created_at", { ascending: false })
+      supabase.from("events").select("*").order("created_at", { ascending: false }),
+      supabase.from("rsvps").select("*")
     ]);
-    
-    // Get RSVPs from shared cache (set by rsvps.ts when RSVPs are submitted)
-    const cachedRsvps = getRsvpsCache();
-    
-    // Try to get RSVPs from Supabase as well
-    let supabaseRsvps: any[] = [];
-    try {
-      const { data, error } = await supabase.from("rsvps").select("*");
-      if (!error && data && data.length > 0) {
-        supabaseRsvps = data;
-      }
-    } catch (e) {
-      console.log("Supabase RSVPs fetch error:", e);
-    }
-    
-    // Merge RSVPs: Supabase data takes precedence, then cached RSVPs
-    const mergedRsvpsMap = new Map();
-    
-    // Add cached RSVPs first
-    cachedRsvps.forEach(r => {
-      mergedRsvpsMap.set(`${r.eventId}-${r.familyId}`, r);
-    });
-    
-    // Add/update with Supabase RSVPs (they're more "persistent")
-    if (supabaseRsvps.length > 0) {
-      supabaseRsvps.forEach((row: any) => {
-        const rsvp = {
-          eventId: row.event_id,
-          familyId: row.family_id,
-          attending: row.attending,
-          reason: row.reason || "",
-          adultsAttendingCount: row.adults_attending_count || 0,
-          childrenAttendingCount: row.children_attending_count || 0,
-          order: row.order || {},
-          specialInstructions: row.special_instructions || "",
-          updatedAt: row.updated_at
-        };
-        mergedRsvpsMap.set(`${rsvp.eventId}-${rsvp.familyId}`, rsvp);
-      });
-    }
-    
-    const rsvps = Array.from(mergedRsvpsMap.values());
 
     let families = DEFAULT_DB.families;
     if (!familiesResult.error && familiesResult.data && familiesResult.data.length > 0) {
@@ -132,7 +86,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         try {
           if (row.address) extra = JSON.parse(row.address);
         } catch {}
-        // Use simple ID like "sharma", "patel" not "sharma_family"
         const namePart = row.name.split(" ")[0].toLowerCase().replace(/[^a-z]/g, "");
         return {
           id: namePart,
@@ -145,10 +98,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Build events list from multiple sources
-    let events: any[] = [];
-    
-    // 1. Add events from Supabase if available
+    let events: any[] = DEFAULT_EVENTS;
     if (!eventsResult.error && eventsResult.data && eventsResult.data.length > 0) {
       events = eventsResult.data.map((row: any) => ({
         id: row.id,
@@ -164,28 +114,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         notes: row.notes || "",
         isActive: row.is_active !== false
       }));
-      eventsCache = events;
-      cacheLoaded = true;
-    }
-    
-    // 2. If we have cached events (from POST /api/events), add them
-    if (cacheLoaded && eventsCache && eventsCache.length > 0) {
-      // Merge cache with Supabase events, avoiding duplicates
-      const existingIds = new Set(events.map(e => e.id));
-      for (const cached of eventsCache) {
-        if (!existingIds.has(cached.id)) {
-          events.unshift(cached);
-        }
-      }
-    }
-    
-    // 3. If still no events, use default events
-    if (events.length === 0) {
-      events = DEFAULT_EVENTS;
     }
 
-    // 4. Use merged RSVPs (from cache + Supabase)
-    // rsvps is already set from the merge above
+    let rsvps = DEFAULT_DB.rsvps;
+    if (!rsvpsResult.error && rsvpsResult.data && rsvpsResult.data.length > 0) {
+      rsvps = rsvpsResult.data.map((row: any) => ({
+        eventId: row.event_id,
+        familyId: row.family_id,
+        attending: row.attending,
+        reason: row.reason || "",
+        adultsAttendingCount: row.adults_attending_count || 0,
+        childrenAttendingCount: row.children_attending_count || 0,
+        order: row.order || {},
+        specialInstructions: row.special_instructions || "",
+        updatedAt: row.updated_at
+      }));
+    }
 
     return res.json({
       families,
@@ -193,8 +137,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       events,
       rsvps,
       notifications: [],
-      _version: "db_v4",
-      _source: supabaseRsvps.length > 0 ? "supabase+cache" : "cache"
+      _version: "db_v5",
+      _source: "supabase"
     });
   } catch (err) {
     console.error("Supabase error:", err);
