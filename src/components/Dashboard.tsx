@@ -116,7 +116,7 @@ ${evt.notes ? `💬 *Notes:* ${evt.notes}\n` : ""}
 
     try {
       const res = await fetch(`/api/families/${currentFamily.id}?action=change-pin`, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPin: oldPin, newPin })
       });

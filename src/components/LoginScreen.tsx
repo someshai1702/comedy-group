@@ -47,7 +47,7 @@ export default function LoginScreen({ families, onLoginSuccess }: LoginScreenPro
 
     try {
       const res = await fetch(`/api/families/${changePinFamilyId}?action=change-pin`, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPin: oldPin, newPin })
       });
