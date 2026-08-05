@@ -146,10 +146,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Build update object - include ALL fields
       const updateData: any = {};
       updateData.name = name;
-      updateData.adults = adults;
-      updateData.children = children;
+      updateData.adults = Array.isArray(adults) ? adults : [];
+      updateData.children = Array.isArray(children) ? children : [];
       if (pin !== undefined) updateData.pin = pin;
       if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
+      
+      console.log("[POST /api/families] Updating family:", currentFamily.id, "with:", updateData);
       
       const { data, error } = await supabase
         .from("families")
