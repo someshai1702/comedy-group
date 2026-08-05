@@ -10,9 +10,9 @@ export function initializeFirebase(): boolean {
     return true;
   }
 
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const projectId = process.env.FIREBASE_PROJECT_ID || "comedy-group-project";
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY || "";
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || "firebase-adminsdk-fbsvc@comedy-group-project.iam.gserviceaccount.com";
 
   if (!projectId || !privateKey || !clientEmail) {
     console.warn("[Firebase] Environment variables not configured. Push notifications will use Web Push fallback.");
