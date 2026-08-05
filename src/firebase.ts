@@ -6,14 +6,13 @@ import { initializeApp, getApps, FirebaseApp } from 'firebase/compat/app';
 import { getMessaging, Messaging, getToken, onMessage } from 'firebase/compat/messaging';
 
 // Firebase configuration - set these in Vercel Environment Variables
-// IMPORTANT: Replace these with your actual Firebase web app config
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "YOUR_API_KEY",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBbKwHnN6Em2K_16-4oY2xtgmBxml8R4Lo",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "comedy-group-project.firebaseapp.com",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "comedy-group-project",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "comedy-group-project.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "YOUR_SENDER_ID",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "YOUR_APP_ID",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "comedy-group-project.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "841868646390",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:841868646390:web:cb41e7892ab8ddbc4759d7",
 };
 
 // Initialize Firebase only once
@@ -76,7 +75,7 @@ export async function requestFCMToken(): Promise<string | null> {
 
     // Get existing token or request new one
     const token = await getToken(mess, {
-      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY || "",
+      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY || "BBpGh0AzhMCqEIb7nc9qbIakcQc662UG4pu8H5PSiF2TR8WKoiwiw0QkUfOpmaT6Vk0qo1zkMcqLS5X-h2coRnE",
     });
 
     if (token) {

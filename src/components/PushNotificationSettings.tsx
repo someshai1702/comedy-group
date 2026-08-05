@@ -125,7 +125,7 @@ export default function PushNotificationSettings({ familyId }: PushNotificationS
           const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(
-              import.meta.env.VITE_FIREBASE_VAPID_KEY || "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U"
+              import.meta.env.VITE_FIREBASE_VAPID_KEY || "BBpGh0AzhMCqEIb7nc9qbIakcQc662UG4pu8H5PSiF2TR8WKoiwiw0QkUfOpmaT6Vk0qo1zkMcqLS5X-h2coRnE"
             )
           });
 
