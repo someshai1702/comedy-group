@@ -34,9 +34,6 @@ export default function EventDetails({
   console.log("[EventDetails] isHost:", isHost, "isAdmin:", isAdmin);
   console.log("[EventDetails] canDelete:", canDelete, "onDeleteEvent:", !!onDeleteEvent);
   
-  // For debugging: show delete button if event is active
-  const showDeleteForDebug = true;
-  
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   // --- WhatsApp Sharing ---
@@ -245,7 +242,7 @@ ${event.googleMapsUrl ? `🔗 *Google Maps:* ${event.googleMapsUrl}\n` : ""}⏳ 
         </button>
         
         {/* Delete Button - Only for Host or Admin */}
-        {(canDelete || showDeleteForDebug) && onDeleteEvent && (
+        {canDelete && onDeleteEvent && (
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="flex items-center gap-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors text-sm font-bold"
