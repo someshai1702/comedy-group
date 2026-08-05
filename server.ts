@@ -603,6 +603,46 @@ app.post("/api/events/:id/delete", async (req, res) => {
   res.json({ success: true });
 });
 
+// GET version of /api/events/:id/delete
+app.get("/api/events/:id/delete", async (req, res) => {
+  const { id } = req.params;
+  const requesterFamilyId = req.query.familyId as string;
+  console.log(`[GET /api/events/${id}/delete] requesterFamilyId:`, requesterFamilyId);
+
+  if (!requesterFamilyId) {
+    console.log(`[GET /api/events/${id}/delete] Rejecting: requesterFamilyId is missing`);
+    return res.status(400).json({ error: "Requester Family ID is required for authorization" });
+  }
+
+  const db = await readDatabase();
+  const eventIndex = db.events.findIndex((e: any) => e.id === id);
+  console.log(`[GET /api/events/${id}/delete] eventIndex:`, eventIndex);
+
+  if (eventIndex === -1) {
+    console.log(`[GET /api/events/${id}/delete] Rejecting: event not found`);
+    return res.status(404).json({ error: "Event not found" });
+  }
+
+  const event = db.events[eventIndex];
+  console.log(`[GET /api/events/${id}/delete] event hostFamilyId:`, event.hostFamilyId);
+  if (requesterFamilyId !== "admin" && event.hostFamilyId !== requesterFamilyId) {
+    console.log(`[GET /api/events/${id}/delete] Rejecting: permission denied`);
+    return res.status(403).json({ error: "You do not have permission to delete this event" });
+  }
+
+  // Remove event
+  db.events.splice(eventIndex, 1);
+
+  // Clean up associated RSVPs
+  db.rsvps = db.rsvps.filter((r: any) => r.eventId !== id);
+
+  // Clean up notifications for this event
+  db.notifications = db.notifications.filter((n: any) => n.eventId !== id);
+
+  await writeDatabase(db);
+  res.json({ success: true });
+});
+
 // Standalone delete endpoint (no path params for Vercel)
 app.post("/api/delete-event", async (req, res) => {
   const { eventId, familyId } = req.body;
