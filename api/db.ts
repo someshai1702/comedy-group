@@ -80,11 +80,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ]);
 
     let families = DEFAULT_DB.families;
-    console.log("[db] familiesResult:", JSON.stringify(familiesResult.data?.slice(0,2), null, 2));
     if (!familiesResult.error && familiesResult.data && familiesResult.data.length > 0) {
       families = familiesResult.data.map((row: any) => {
         const namePart = row.name.split(" ")[0].toLowerCase().replace(/[^a-z]/g, "");
-        console.log("[db] processing row:", row.name, "adults:", row.adults, "children:", row.children);
         return {
           id: namePart,
           name: row.name,
