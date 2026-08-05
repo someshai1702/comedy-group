@@ -325,10 +325,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .eq("id", id)
           .single();
         if (!error && data) {
+          // Convert UUID to short family ID for permission check
+          const hostFamilyId = UUID_TO_FAMILY_MAP[data.host_family_id] || data.host_family_id;
           eventToDelete = {
             id: data.id,
             name: data.name,
-            hostFamilyId: data.host_family_id
+            hostFamilyId: hostFamilyId
           };
         }
       } catch (e) {
