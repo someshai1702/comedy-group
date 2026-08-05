@@ -308,8 +308,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get the requesting family from headers or body
     const requestingFamilyId = body?.familyId || query?.familyId || req.headers["x-family-id"];
     
-    // Find the event to check permissions
-    const eventToDelete = eventsCache?.find(e => e.id === id);
+    // Find the event to check permissions (query Supabase directly since cache is empty in serverless)
+    let eventToDelete: any = null;
+    
+    // Try cache first
+    if (eventsCache) {
+      eventToDelete = eventsCache.find(e => e.id === id);
+    }
+    
+    // If not in cache, query Supabase
+    if (!eventToDelete) {
+      try {
+        const { data, error } = await supabase
+          .from("events")
+          .select("*")
+          .eq("id", id)
+          .single();
+        if (!error && data) {
+          eventToDelete = {
+            id: data.id,
+            name: data.name,
+            hostFamilyId: data.host_family_id
+          };
+        }
+      } catch (e) {
+        console.error("Error fetching event:", e);
+      }
+    }
     
     if (!eventToDelete) {
       return res.status(404).json({ error: "Event not found" });
@@ -333,14 +358,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       eventsCache = eventsCache.filter(e => e.id !== id);
     }
 
-    // Try to delete from Supabase
+    // Delete from Supabase
     try {
-      await supabase
+      const { error } = await supabase
         .from("events")
         .delete()
         .eq("id", id);
+      if (error) {
+        console.error("Supabase delete error:", error);
+        return res.status(500).json({ error: "Failed to delete event" });
+      }
     } catch (err) {
       console.error("Supabase delete error:", err);
+      return res.status(500).json({ error: "Failed to delete event" });
     }
 
     return res.json({ success: true, message: "Event deleted" });
