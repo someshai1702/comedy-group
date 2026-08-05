@@ -74,7 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Fetch families, events, and RSVPs in parallel
     const [familiesResult, eventsResult, rsvpsResult] = await Promise.all([
-      supabase.from("families").select("id, name, photo_url, address"),
+      supabase.from("families").select("id, name, adults, children, pin, photo_url"),
       supabase.from("events").select("*").order("created_at", { ascending: false }),
       supabase.from("rsvps").select("*")
     ]);
@@ -82,18 +82,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let families = DEFAULT_DB.families;
     if (!familiesResult.error && familiesResult.data && familiesResult.data.length > 0) {
       families = familiesResult.data.map((row: any) => {
-        let extra: any = {};
-        try {
-          if (row.address) extra = JSON.parse(row.address);
-        } catch {}
         const namePart = row.name.split(" ")[0].toLowerCase().replace(/[^a-z]/g, "");
         return {
           id: namePart,
           name: row.name,
-          adults: extra.adults || [],
-          children: extra.children || [],
-          pin: extra.pin || "0000",
-          photoUrl: row.photo_url || extra.photoUrl || ""
+          adults: Array.isArray(row.adults) ? row.adults : [],
+          children: Array.isArray(row.children) ? row.children : [],
+          pin: row.pin || "0000",
+          photoUrl: row.photo_url || ""
         };
       });
     }
