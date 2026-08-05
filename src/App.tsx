@@ -190,14 +190,8 @@ export default function App() {
   // Delete event (Admin / Captain action)
   const handleDeleteEvent = async (eventId: string) => {
     console.log("handleDeleteEvent: eventId =", eventId, "requester =", currentFamily?.id);
-    // Use /api/login with action=delete-event as workaround for Vercel method issue
-    const response = await fetch("/api/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ action: "delete-event", eventId, familyId: currentFamily?.id }),
-    });
+    // Use GET /api/delete-event to avoid Vercel POST method issues
+    const response = await fetch(`/api/delete-event?familyId=${currentFamily?.id}&eventId=${eventId}`);
 
     console.log("handleDeleteEvent: response status =", response.status);
     if (!response.ok) {
