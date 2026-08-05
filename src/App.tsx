@@ -190,8 +190,12 @@ export default function App() {
   // Delete event (Admin / Captain action)
   const handleDeleteEvent = async (eventId: string) => {
     console.log("handleDeleteEvent: eventId =", eventId, "requester =", currentFamily?.id);
-    // Use GET /api/events/:id/delete endpoint
-    const response = await fetch(`/api/events/${eventId}/delete?familyId=${currentFamily?.id}`);
+    // Use DELETE /api/events?id=... with body for familyId
+    const response = await fetch(`/api/events?id=${eventId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ familyId: currentFamily?.id }),
+    });
 
     console.log("handleDeleteEvent: response status =", response.status);
     if (!response.ok) {
