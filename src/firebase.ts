@@ -1,9 +1,8 @@
 // Firebase configuration for frontend
 // These values should be set as environment variables in Vercel
 
-// Using compat imports for better compatibility
-import { initializeApp, getApps, FirebaseApp } from 'firebase/compat/app';
-import { getMessaging, Messaging, getToken, onMessage } from 'firebase/compat/messaging';
+import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
+import { getMessaging, Messaging, getToken, onMessage } from 'firebase/messaging';
 
 // Firebase configuration - set these in Vercel Environment Variables
 const firebaseConfig = {
