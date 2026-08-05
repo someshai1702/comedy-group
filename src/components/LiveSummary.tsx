@@ -3,18 +3,22 @@ import { Event, Family, RSVP, Menu } from "../types";
 import { Copy, Share2, Printer, Download, CheckCircle, XCircle, AlertCircle, ShoppingBag, Eye, Star, ChevronLeft } from "lucide-react";
 
 interface LiveSummaryProps {
-  event: Event;
+  events: Event[];
   families: Family[];
   rsvps: RSVP[];
   menu: Menu;
   onBack: () => void;
 }
 
-export default function LiveSummary({ event, families, rsvps, menu, onBack }: LiveSummaryProps) {
+export default function LiveSummary({ events, families, rsvps, menu, onBack }: LiveSummaryProps) {
   const [copied, setCopied] = useState<boolean>(false);
+  const [selectedEventId, setSelectedEventId] = useState<string>(events[0]?.id || "");
 
-  // 1. Filter RSVPs for this event
-  const eventRsvps = rsvps.filter((r) => r.eventId === event.id);
+  // Get the selected event
+  const selectedEvent = events.find(e => e.id === selectedEventId) || events[0];
+
+  // 1. Filter RSVPs for the selected event
+  const eventRsvps = rsvps.filter((r) => r.eventId === selectedEvent?.id);
 
   // 2. Headcount Summaries
   const attendingRsvps = eventRsvps.filter((r) => r.attending === "Yes");
@@ -83,9 +87,9 @@ export default function LiveSummary({ event, families, rsvps, menu, onBack }: Li
     const imageLink = `${appLink}/comedy_group.png`;
 
     let text = `*🎭 Comedy Group Dinner Planning 🎭*\n`;
-    text += `*Occasion:* ${event.name || "Comedy Group Dinner"}\n`;
-    text += `*Date:* ${new Date(event.date).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}\n`;
-    text += `*Venue:* ${event.restaurant || "TBD"}\n\n`;
+    text += `*Occasion:* ${selectedEvent?.name || "Comedy Group Dinner"}\n`;
+    text += `*Date:* ${new Date(selectedEvent?.date || "").toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}\n`;
+    text += `*Venue:* ${selectedEvent?.restaurant || "TBD"}\n\n`;
 
     text += `*--- Attending Status Summary ---*\n`;
     text += `✅ Coming Families: ${familiesComing}\n`;
@@ -161,9 +165,19 @@ export default function LiveSummary({ event, families, rsvps, menu, onBack }: Li
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-100 pb-4 print:border-black/10">
         <div className="space-y-1">
           <h2 className="text-2xl font-black text-gray-900 print:text-black">🍽️ Live Orders & Attendance</h2>
-          <p className="text-gray-500 text-xs font-semibold print:text-slate-600">
-            Real-time aggregates for <span className="font-extrabold text-orange-600 print:text-black">{event.name || "Comedy Group Dinner"}</span>
-          </p>
+          
+          {/* Event Selector Dropdown */}
+          <select
+            value={selectedEventId}
+            onChange={(e) => setSelectedEventId(e.target.value)}
+            className="text-gray-500 text-xs font-semibold bg-transparent border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-orange-400"
+          >
+            {events.map((evt) => (
+              <option key={evt.id} value={evt.id}>
+                {evt.name || "Comedy Group Dinner"} - {new Date(evt.date).toLocaleDateString()}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Action button panel */}

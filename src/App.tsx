@@ -395,9 +395,9 @@ export default function App() {
             )}
 
             {activeTab === "liveSummary" && (
-              latestEvent ? (
+              dbState.events && dbState.events.length > 0 ? (
                 <LiveSummary
-                  event={latestEvent}
+                  events={dbState.events}
                   families={dbState.families}
                   rsvps={dbState.rsvps}
                   menu={dbState.menu}
