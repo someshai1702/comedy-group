@@ -23,22 +23,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Check if event exists and is active
     let eventExists = DEMO_EVENT_IDS.includes(eventId);
-    let isActive = true;
+    let isOrderingClosed = false;
 
     if (!eventExists) {
       const { data: event, error: eventError } = await supabase
         .from("events")
-        .select("id, is_active")
+        .select("id, is_ordering_closed")
         .eq("id", eventId)
         .single();
 
       if (eventError || !event) {
         return res.status(404).json({ error: "Event not found" });
       }
-      isActive = event.is_active !== false;
+      isOrderingClosed = event.is_ordering_closed === true;
     }
 
-    if (!isActive) {
+    if (isOrderingClosed) {
       return res.status(403).json({ error: "This event is currently locked by the captain. No orders or changes are accepted." });
     }
 
