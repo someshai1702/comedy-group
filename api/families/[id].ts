@@ -67,7 +67,10 @@ async function updateFamilyInDb(id: string, updates: any): Promise<any | null> {
       .from("families")
       .select("id, name, address, photo_url");
     
-    if (fetchError || !allFamilies) return null;
+    if (fetchError || !allFamilies) {
+      console.error("[updateFamilyInDb] Fetch error:", fetchError);
+      return null;
+    }
     
     const idLower = id.toLowerCase();
     const matching = allFamilies.find((f: any) => {
@@ -75,12 +78,18 @@ async function updateFamilyInDb(id: string, updates: any): Promise<any | null> {
       return nameLower.startsWith(idLower) || nameLower.includes(idLower);
     });
     
-    if (!matching) return null;
+    if (!matching) {
+      console.error("[updateFamilyInDb] No matching family for:", id);
+      return null;
+    }
+    
+    console.log("[updateFamilyInDb] Found family:", matching.name, "id:", matching.id);
     
     let extra: any = {};
     if (matching.address) {
       try { extra = JSON.parse(matching.address); } catch {}
     }
+    console.log("[updateFamilyInDb] Current extra:", extra);
     
     // Apply updates
     if (updates.name !== undefined) {
@@ -90,6 +99,9 @@ async function updateFamilyInDb(id: string, updates: any): Promise<any | null> {
     if (updates.children !== undefined) extra.children = updates.children;
     if (updates.pin !== undefined) extra.pin = updates.pin;
     if (updates.photoUrl !== undefined) extra.photoUrl = updates.photoUrl;
+    
+    console.log("[updateFamilyInDb] Updated extra:", extra);
+    console.log("[updateFamilyInDb] JSON:", JSON.stringify(extra));
     
     const { data, error } = await supabase
       .from("families")
@@ -103,13 +115,14 @@ async function updateFamilyInDb(id: string, updates: any): Promise<any | null> {
       .single();
     
     if (error) {
-      console.error("Update error:", error);
+      console.error("[updateFamilyInDb] Update error:", error);
       return null;
     }
     
+    console.log("[updateFamilyInDb] Updated data:", data);
     return rowToFamily(data);
   } catch (err) {
-    console.error("Update failed:", err);
+    console.error("[updateFamilyInDb] Update failed:", err);
     return null;
   }
 }
