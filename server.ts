@@ -580,6 +580,38 @@ app.post("/api/events/:id/delete", async (req, res) => {
   res.json({ success: true });
 });
 
+// Standalone delete endpoint (no path params for Vercel)
+app.post("/api/delete-event", async (req, res) => {
+  const { eventId, familyId } = req.body;
+  console.log(`[POST /api/delete-event] eventId:`, eventId, "familyId:", familyId);
+
+  if (!familyId) {
+    return res.status(400).json({ error: "Family ID is required" });
+  }
+  if (!eventId) {
+    return res.status(400).json({ error: "Event ID is required" });
+  }
+
+  const db = await readDatabase();
+  const eventIndex = db.events.findIndex((e: any) => e.id === eventId);
+
+  if (eventIndex === -1) {
+    return res.status(404).json({ error: "Event not found" });
+  }
+
+  const event = db.events[eventIndex];
+  if (familyId !== "admin" && event.hostFamilyId !== familyId) {
+    return res.status(403).json({ error: "You do not have permission to delete this event" });
+  }
+
+  db.events.splice(eventIndex, 1);
+  db.rsvps = db.rsvps.filter((r: any) => r.eventId !== eventId);
+  db.notifications = db.notifications.filter((n: any) => n.eventId !== eventId);
+
+  await writeDatabase(db);
+  res.json({ success: true });
+});
+
 // Toggle Event Active/Locked status
 app.put("/api/events/:id/toggle-active", async (req, res) => {
   const { id } = req.params;
