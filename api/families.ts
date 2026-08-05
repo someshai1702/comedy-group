@@ -17,21 +17,17 @@ const DEFAULT_FAMILIES = [
   { id: "admin", name: "Group Admin", adults: ["Captain Admin"], children: [], pin: "0000", photoUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200" }
 ];
 
-// Convert DB row to family object
+// Convert DB row to family object (matching Supabase schema columns)
 function rowToFamily(row: any): any {
-  let extra = {};
-  try {
-    if (row.address) extra = JSON.parse(row.address);
-  } catch {}
-  // Use simple ID like "sharma", "patel" not "sharma_family"
-  const namePart = row.name.split(" ")[0].toLowerCase();
+  // Use simple ID from the id column or derive from name
+  const namePart = row.name ? row.name.split(" ")[0].toLowerCase() : "unknown";
   return {
-    id: namePart,
+    id: row.id || namePart,
     name: row.name,
-    adults: extra.adults || [],
-    children: extra.children || [],
-    pin: extra.pin || "0000",
-    photoUrl: row.photo_url || extra.photoUrl || ""
+    adults: row.adults || [],
+    children: row.children || [],
+    pin: row.pin || "0000",
+    photoUrl: row.photoUrl || ""
   };
 }
 
@@ -42,9 +38,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // Select all columns including adults, children, pin
     const { data, error } = await supabase
       .from("families")
-      .select("id, name, photo_url, address")
+      .select("id, name, adults, children, pin, photoUrl")
       .limit(50);
 
     if (error) {

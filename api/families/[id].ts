@@ -9,7 +9,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const DEFAULT_FAMILIES: Record<string, any> = {
   sharma: { id: "sharma", name: "Sharma Family", adults: ["Rahul", "Priya"], children: ["Kabir", "Meera"], pin: "1111", photoUrl: "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&q=80&w=200" },
   patel: { id: "patel", name: "Patel Family", adults: ["Amit", "Sneha"], children: ["Aarav", "Diya"], pin: "2222", photoUrl: "https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&q=80&w=200" },
-  mangesh: { id: "mangesh", name: "Mangesh Devi & Family", adults: ["Mangesh", "Priyanka"], children: ["Prinkesh", "Piyush"], pin: "3333", photoUrl: "https://images.unsplash.com/photo-1506869640319-fe1a24fd76dc?auto=format&fit=crop&q=80&w=200" },
+  mehta: { id: "mehta", name: "Mehta Family", adults: ["Raj", "Ritu"], children: ["Ishaan", "Anya"], pin: "3333", photoUrl: "https://images.unsplash.com/photo-1506869640319-fe1a24fd76dc?auto=format&fit=crop&q=80&w=200" },
   joshi: { id: "joshi", name: "Joshi Family", adults: ["Vikram", "Aditi"], children: ["Vivaan", "Saisha"], pin: "4444", photoUrl: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=200" },
   kapoor: { id: "kapoor", name: "Kapoor Family", adults: ["Sanjay", "Neha"], children: ["Rohan", "Shanaya"], pin: "5555", photoUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200" },
   malhotra: { id: "malhotra", name: "Malhotra Family", adults: ["Karan", "Pooja"], children: ["Arjun", "Myra"], pin: "6666", photoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200" },
@@ -17,39 +17,45 @@ const DEFAULT_FAMILIES: Record<string, any> = {
   admin: { id: "admin", name: "Group Admin", adults: ["Captain Admin"], children: [], pin: "0000", photoUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200" }
 };
 
-// Convert DB row to family object
+// Convert DB row to family object (matching Supabase schema columns)
 function rowToFamily(row: any): any {
-  let extra: any = {};
-  try {
-    if (row.address) extra = JSON.parse(row.address);
-  } catch {}
-  // Use simple ID like "sharma", "patel" not "sharma_family"
-  const namePart = row.name.split(" ")[0].toLowerCase();
+  // Use simple ID from the id column or derive from name
+  const namePart = row.name ? row.name.split(" ")[0].toLowerCase() : "unknown";
   return {
-    id: namePart,
+    id: row.id || namePart,
     name: row.name,
-    adults: extra.adults || [],
-    children: extra.children || [],
-    pin: extra.pin || "0000",
-    photoUrl: row.photo_url || extra.photoUrl || ""
+    adults: row.adults || [],
+    children: row.children || [],
+    pin: row.pin || "0000",
+    photoUrl: row.photoUrl || ""
   };
 }
 
 // Find family by simple ID
 async function findFamilyById(id: string): Promise<any | null> {
   try {
-    // Fetch all families and find the one matching the ID
+    // Try to find by exact ID first
     const { data, error } = await supabase
       .from("families")
-      .select("id, name, photo_url, address");
+      .select("id, name, adults, children, pin, photoUrl")
+      .eq("id", id.toLowerCase())
+      .single();
     
-    if (error || !data) return null;
+    if (!error && data) {
+      return rowToFamily(data);
+    }
     
-    // Find matching family by ID or by name prefix
+    // If not found by ID, try to find by name prefix
+    const { data: allData, error: allError } = await supabase
+      .from("families")
+      .select("id, name, adults, children, pin, photoUrl");
+    
+    if (allError || !allData) return null;
+    
     const idLower = id.toLowerCase();
-    const matching = data.find((f: any) => {
-      const nameLower = f.name.toLowerCase();
-      return nameLower.startsWith(idLower) || nameLower.includes(idLower);
+    const matching = allData.find((f: any) => {
+      const nameLower = (f.name || "").toLowerCase();
+      return nameLower.startsWith(idLower) || nameLower.includes(idLower) || f.id === idLower;
     });
     
     if (matching) return rowToFamily(matching);
@@ -59,43 +65,32 @@ async function findFamilyById(id: string): Promise<any | null> {
   }
 }
 
-// Update family in Supabase
+// Update family in Supabase (using direct columns as per schema)
 async function updateFamilyInDb(id: string, updates: any): Promise<any | null> {
   try {
-    // First get the current row by finding matching family
-    const { data: allFamilies, error: fetchError } = await supabase
-      .from("families")
-      .select("id, name, address, photo_url");
+    // First find the family
+    const family = await findFamilyById(id);
+    if (!family) return null;
     
-    if (fetchError || !allFamilies) return null;
+    // Build update object with direct columns
+    const updateData: any = {};
     
-    const idLower = id.toLowerCase();
-    const matching = allFamilies.find((f: any) => {
-      const nameLower = f.name.toLowerCase();
-      return nameLower.startsWith(idLower) || nameLower.includes(idLower);
-    });
+    if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.adults !== undefined) updateData.adults = updates.adults;
+    if (updates.children !== undefined) updateData.children = updates.children;
+    if (updates.pin !== undefined) updateData.pin = updates.pin;
+    if (updates.photoUrl !== undefined) updateData.photoUrl = updates.photoUrl;
     
-    if (!matching) return null;
-    
-    let extra: any = {};
-    if (matching.address) {
-      try { extra = JSON.parse(matching.address); } catch {}
+    if (Object.keys(updateData).length === 0) {
+      return family; // Nothing to update
     }
     
-    // Apply updates
-    if (updates.adults !== undefined) extra.adults = updates.adults;
-    if (updates.children !== undefined) extra.children = updates.children;
-    if (updates.pin !== undefined) extra.pin = updates.pin;
-    if (updates.photoUrl !== undefined) extra.photoUrl = updates.photoUrl;
+    console.log("[Family Update] Updating family:", id, "with:", updateData);
     
     const { data, error } = await supabase
       .from("families")
-      .update({
-        name: updates.name || matching.name,
-        photo_url: updates.photoUrl,
-        address: JSON.stringify(extra)
-      })
-      .eq("id", matching.id)
+      .update(updateData)
+      .eq("id", family.id)
       .select()
       .single();
     
@@ -104,6 +99,7 @@ async function updateFamilyInDb(id: string, updates: any): Promise<any | null> {
       return null;
     }
     
+    console.log("[Family Update] Success:", data);
     return rowToFamily(data);
   } catch (err) {
     console.error("Update failed:", err);
@@ -133,7 +129,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ success: true, family, source: "supabase" });
     }
     // Fall back to defaults
-    const defaultFamily = DEFAULT_FAMILIES[id];
+    const defaultFamily = DEFAULT_FAMILIES[id.toLowerCase()];
     if (defaultFamily) {
       return res.json({ success: true, family: defaultFamily, source: "default" });
     }
@@ -144,6 +140,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "PUT") {
     const { name, adults, children, pin, photoUrl } = req.body;
     
+    console.log("[PUT /api/families/:id] id:", id, "updates:", { name, adults, children, pin, photoUrl });
+    
     // Try to update in Supabase
     const updated = await updateFamilyInDb(id, { name, adults, children, pin, photoUrl });
     if (updated) {
@@ -151,7 +149,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     
     // Fall back to local update (won't persist on serverless)
-    const defaultFamily = DEFAULT_FAMILIES[id];
+    const defaultFamily = DEFAULT_FAMILIES[id.toLowerCase()];
     if (!defaultFamily) {
       return res.status(404).json({ error: "Family not found" });
     }
@@ -190,6 +188,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     return res.json({ success: true, family: { ...family, pin: newPin }, source: "memory" });
   }
-
+	
   return res.status(405).json({ error: "Method not allowed" });
 }
