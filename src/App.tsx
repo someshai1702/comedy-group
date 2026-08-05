@@ -70,11 +70,17 @@ export default function App() {
       if (eventsResponse.ok) {
         const eventsData = await eventsResponse.json();
         if (eventsData.events && eventsData.events.length > 0) {
-          // Merge events from events API
+          // Merge events from events API - prioritize events from Supabase over local db
           const existingIds = new Set(data.events.map((e: any) => e.id));
           for (const evt of eventsData.events) {
             if (!existingIds.has(evt.id)) {
               data.events.unshift(evt);
+            } else {
+              // Replace local event with Supabase version to ensure correct hostFamilyId
+              const idx = data.events.findIndex((e: any) => e.id === evt.id);
+              if (idx !== -1) {
+                data.events[idx] = evt;
+              }
             }
           }
         }

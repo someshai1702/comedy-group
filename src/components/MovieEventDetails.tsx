@@ -168,11 +168,6 @@ ${event.deadline ? `\n⏳ *RSVP Deadline:* ${dlString}\n` : ""}
           Back to Dashboard
         </button>
         
-        {/* DEBUG: Show canDelete status */}
-        <div className="text-xs text-gray-400">
-          DEBUG: canDelete={String(canDelete)} (isHost={String(isHost)}, isAdmin={String(isAdmin)}, currentFamily.id={currentFamily.id}, event.hostFamilyId={event.hostFamilyId})
-        </div>
-        
         {/* Delete Button - Only for Host or Admin */}
         {canDelete && onDeleteEvent && (
           <button
