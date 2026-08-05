@@ -33,9 +33,18 @@ function rowToFamily(row: any): any {
 
 // GET /api/families - List all or single family
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Parse query from URL if not in req.query
+  let familyId = req.query.id as string;
+  if (!familyId && req.url) {
+    const urlParts = req.url.split('?');
+    if (urlParts.length > 1) {
+      const params = new URLSearchParams(urlParts[1]);
+      familyId = params.get('id') || undefined;
+    }
+  }
+  
   // Handle GET requests
   if (req.method === "GET") {
-    const familyId = req.query.id as string;
     
     try {
       // If id is provided, return single family
@@ -102,7 +111,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // PUT /api/families?id=xxx
   if (req.method === "PUT") {
-    const familyId = req.query.id as string;
+    // Parse familyId from query
+    let familyId = req.query.id as string;
+    if (!familyId && req.url) {
+      const urlParts = req.url.split('?');
+      if (urlParts.length > 1) {
+        const params = new URLSearchParams(urlParts[1]);
+        familyId = params.get('id') || undefined;
+      }
+    }
     const { name, adults, children, pin, photoUrl } = req.body;
     
     console.log("[PUT /api/families] id:", familyId, "updates:", { name, adults, children, pin, photoUrl });
@@ -184,7 +201,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // DELETE /api/families?id=xxx - Delete a family
   if (req.method === "DELETE") {
-    const familyId = req.query.id as string;
+    // Parse familyId from query
+    let familyId = req.query.id as string;
+    if (!familyId && req.url) {
+      const urlParts = req.url.split('?');
+      if (urlParts.length > 1) {
+        const params = new URLSearchParams(urlParts[1]);
+        familyId = params.get('id') || undefined;
+      }
+    }
     
     if (!familyId) {
       return res.status(400).json({ error: "Family ID required" });
