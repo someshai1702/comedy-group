@@ -1,12 +1,10 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
+import { getRsvpsCache, addOrUpdateRsvp } from "./shared-cache";
 
 const supabaseUrl = process.env.SUPABASE_URL || "https://tmdsgjheinmjxqthzmvm.supabase.co";
 const supabaseKey = process.env.SUPABASE_KEY || "sb_publishable_yjiwdDGSPLJOO27mhdjU-g_XR-ir5Bg";
 const supabase = createClient(supabaseUrl, supabaseKey);
-
-// In-memory cache for RSVPs (persists across function invocations in same container)
-let rsvpsCache: any[] = [];
 
 // Demo events that are always valid for RSVPs
 const DEMO_EVENT_IDS = ["demo-event-1", "demo-event-2"];
@@ -15,7 +13,7 @@ const DEMO_EVENT_IDS = ["demo-event-1", "demo-event-2"];
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle GET request - return cached RSVPs
   if (req.method === "GET") {
-    // Also try to fetch from Supabase and merge
+    // Try Supabase first for persisted data
     try {
       const { data, error } = await supabase.from("rsvps").select("*");
       if (!error && data && data.length > 0) {
@@ -35,7 +33,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (err) {
       console.error("Supabase fetch error:", err);
     }
-    return res.json({ success: true, rsvps: rsvpsCache, _source: "cache" });
+    // Fall back to shared cache
+    return res.json({ success: true, rsvps: getRsvpsCache(), _source: "cache" });
   }
 
   // Handle POST request - submit RSVP
@@ -84,13 +83,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       updatedAt: new Date().toISOString()
     };
 
-    // Update or add to cache
-    const existingIndex = rsvpsCache.findIndex(r => r.eventId === eventId && r.familyId === familyId);
-    if (existingIndex >= 0) {
-      rsvpsCache[existingIndex] = rsvpData;
-    } else {
-      rsvpsCache.push(rsvpData);
-    }
+    // Update or add to shared cache
+    addOrUpdateRsvp(rsvpData);
 
     // Try to upsert RSVP to Supabase (for persistence)
     try {
