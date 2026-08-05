@@ -105,9 +105,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         special_instructions: rsvpData.specialInstructions,
         updated_at: rsvpData.updatedAt
       };
-      await supabase
+      const { error: upsertError } = await supabase
         .from("rsvps")
         .upsert([supabaseRsvpData], { onConflict: "event_id,family_id" });
+      
+      if (upsertError) {
+        console.error("Supabase upsert error:", upsertError);
+        // Fall back to cache only
+      }
     } catch (supabaseError) {
       console.error("Supabase RSVP error (continuing with cache):", supabaseError);
     }
