@@ -157,8 +157,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json({ success: true, family: result, source: "memory" });
   }
 
-  // PATCH /api/families/:id/change-pin
-  if (req.method === "PATCH" && url.includes("/change-pin")) {
+  // PATCH /api/families/:id/change-pin or /api/families/:id?action=change-pin
+  if (req.method === "PATCH" && (url.includes("/change-pin") || req.query?.action === "change-pin")) {
     const { currentPin, newPin } = req.body;
     
     // Get current family

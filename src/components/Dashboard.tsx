@@ -115,10 +115,10 @@ ${evt.notes ? `💬 *Notes:* ${evt.notes}\n` : ""}
     setPinSuccess("");
 
     try {
-      const res = await fetch(`/api/families/${currentFamily.id}/change-pin`, {
-        method: "PUT",
+      const res = await fetch(`/api/families/${currentFamily.id}?action=change-pin`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ oldPin, newPin })
+        body: JSON.stringify({ currentPin: oldPin, newPin })
       });
       const data = await res.json();
       if (!res.ok) {
